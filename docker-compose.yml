@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  shalendar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATABASE_URL=/app/data/shalendar.db
+      - SESSION_SECRET=shalendar-coolify-secret-key-3000
+    volumes:
+      - shalendar_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  shalendar_data:

@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+:root {
+	--font-heading: 'Outfit', sans-serif;
+	--font-body: 'Plus Jakarta Sans', sans-serif;
+}
+
+body {
+	font-family: var(--font-body);
+	background-color: #090d16;
+	color: #f1f5f9;
+	min-height: 100vh;
+	overflow-x: hidden;
+}
+
+/* Enforce Pointer Cursor on All Buttons & Interactive Elements */
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+select,
+summary {
+	cursor: pointer !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-heading);
+}
+
+/* Glassmorphism Cards */
+.glass-panel {
+	background: rgba(15, 23, 42, 0.75);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+	background: rgba(30, 41, 59, 0.5);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-input {
+	background: rgba(15, 23, 42, 0.6);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: #f8fafc;
+}
+
+.glass-input:focus {
+	outline: none;
+	border-color: #f97316;
+	box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+/* Glowing Accent Gradients - Warm Orange Theme */
+.bg-gradient-orange {
+	background: linear-gradient(135deg, #f97316 0%, #f59e0b 50%, #ea580c 100%);
+}
+
+.text-gradient {
+	background: linear-gradient(135deg, #fb923c 0%, #fbbf24 50%, #f97316 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.35);
+}
