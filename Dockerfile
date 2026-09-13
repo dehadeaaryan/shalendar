@@ -3,9 +3,9 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy package manifests and install all dependencies
+# Copy package manifests and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source code and build SvelteKit app
 COPY . .
