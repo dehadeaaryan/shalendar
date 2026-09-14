@@ -212,10 +212,10 @@
 				body: JSON.stringify({
 					action: "create_event",
 					calendarName: data.calendarName,
-					partnerId: newEventPartnerId, // can be partner.id or "BOTH"
+					partnerId: newEventPartnerId,
 					title: newEventTitle,
-					startTime: newEventStart,
-					endTime: newEventEnd,
+					startTime: new Date(newEventStart).toISOString(),
+					endTime: new Date(newEventEnd).toISOString(),
 				}),
 			});
 			if (!res.ok) {
@@ -254,10 +254,10 @@
 					action: "update_event",
 					calendarName: data.calendarName,
 					eventId: selectedEvent.id,
-					partnerId: editPartnerId, // can be partner.id or "BOTH"
+					partnerId: editPartnerId,
 					title: editTitle,
-					startTime: editStart,
-					endTime: editEnd,
+					startTime: new Date(editStart).toISOString(),
+					endTime: new Date(editEnd).toISOString(),
 				}),
 			});
 			if (!res.ok) {
@@ -473,12 +473,42 @@
 		);
 	}
 
+	function isSameDayInTz(
+		d1: Date,
+		isoString: string,
+		targetTz: string,
+	): boolean {
+		try {
+			const fmt = new Intl.DateTimeFormat("en-US", {
+				year: "numeric",
+				month: "numeric",
+				day: "numeric",
+				timeZone: targetTz,
+			});
+			return fmt.format(d1) === fmt.format(new Date(isoString));
+		} catch (e) {
+			const d2 = new Date(isoString);
+			return (
+				d1.getFullYear() === d2.getFullYear() &&
+				d1.getMonth() === d2.getMonth() &&
+				d1.getDate() === d2.getDate()
+			);
+		}
+	}
+
 	function isSameDay(d1: Date, d2: Date) {
 		return (
 			d1.getFullYear() === d2.getFullYear() &&
 			d1.getMonth() === d2.getMonth() &&
 			d1.getDate() === d2.getDate()
 		);
+	}
+
+	function getHourLabel(hr: number, compact = false): string {
+		if (hr === 0) return compact ? "12A" : "12 AM";
+		if (hr === 12) return compact ? "12P" : "12 PM";
+		if (hr > 12) return compact ? `${hr - 12}P` : `${hr - 12} PM`;
+		return compact ? `${hr}A` : `${hr} AM`;
 	}
 
 	function getMemberColor(partnerId: string): string {
@@ -545,13 +575,13 @@
 		return data.events.filter(
 			(evt: any) =>
 				evt.partnerId === memberId &&
-				isSameDay(new Date(evt.startTime), dayDate),
+				isSameDayInTz(dayDate, evt.startTime, activeTimezone),
 		);
 	}
 
 	function getEventsForDay(dayDate: Date) {
 		return data.events.filter((evt: any) =>
-			isSameDay(new Date(evt.startTime), dayDate),
+			isSameDayInTz(dayDate, evt.startTime, activeTimezone),
 		);
 	}
 
@@ -740,7 +770,7 @@
 							class="flex items-center space-x-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-xl shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 active:scale-95 transition-all cursor-pointer"
 						>
 							<Plus class="w-4 h-4 shrink-0" />
-							<span class="hidden sm:inline">Add Event</span>
+							<span class="none sm:inline">Add Event</span>
 						</button>
 
 						<button
@@ -993,13 +1023,7 @@
 										<div
 											class="h-[56px] px-1.5 text-[10px] font-mono text-slate-500 flex items-start pt-1 justify-end"
 										>
-											{hr === 0
-												? "12 AM"
-												: hr === 12
-													? "12 PM"
-													: hr > 12
-														? `${hr - 12} PM`
-														: `${hr} AM`}
+											{getHourLabel(hr, false)}
 										</div>
 									{/each}
 								</div>
@@ -1187,11 +1211,10 @@
 															<div
 																class="h-[56px] px-1 text-[9px] font-mono text-slate-500 flex items-start pt-1 justify-end"
 															>
-																{hr === 0
-																	? "12A"
-																	: hr > 12
-																		? `${hr - 12}P`
-																		: `${hr}A`}
+																{getHourLabel(
+																	hr,
+																	true,
+																)}
 															</div>
 														{/each}
 													</div>
