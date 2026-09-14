@@ -36,5 +36,5 @@ COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.
 
 EXPOSE 3000
 
-# Push any pending schema changes (like created_at default) then start the app
-CMD ["sh", "-c", "npx drizzle-kit push && node build"]
+# Push any pending schema changes non-interactively, then start the app
+CMD ["sh", "-c", "./node_modules/.bin/drizzle-kit push --force && node build"]
