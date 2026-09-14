@@ -59,7 +59,7 @@
 	const syncPayloadExample = `{
   "calendar_name": "shalendar-demo",
   "password": "your-shared-password",
-  "partner_name": "Aaru", // Use exact member name OR "BOTH" for joint events
+  "partner_name": "demo-name", // Use exact member name OR "BOTH" for joint events
   "timezone": "America/Los_Angeles",
   "sync_start": "2026-09-14T00:00:00-07:00",
   "sync_end": "2026-09-21T23:59:59-07:00",

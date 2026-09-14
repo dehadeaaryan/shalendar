@@ -31,6 +31,7 @@
 		CalendarPlus,
 		Edit3,
 		Save,
+		ExternalLink,
 	} from "lucide-svelte";
 
 	const COMMON_TIMEZONES = [
@@ -385,6 +386,39 @@
 			await invalidateAll();
 		} catch (e) {
 			console.error(e);
+		}
+	}
+
+	async function handleDeleteCalendar() {
+		const confirmName = prompt(
+			`DANGER: This will permanently delete "${data.calendarName}" and all associated data.\n\nType "${data.calendarName}" to confirm deletion:`,
+		);
+
+		if (confirmName !== data.calendarName) {
+			if (confirmName !== null)
+				alert("Calendar name did not match. Deletion canceled.");
+			return;
+		}
+
+		try {
+			const res = await fetch("/api/calendar", {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "delete_calendar",
+					calendarName: data.calendarName,
+				}),
+			});
+
+			if (res.ok) {
+				window.location.href = "/";
+			} else {
+				const err = await res.json();
+				alert(err.error || "Failed to delete calendar.");
+			}
+		} catch (e) {
+			console.error(e);
+			alert("An error occurred while deleting the calendar.");
 		}
 	}
 
@@ -1869,13 +1903,23 @@
 					</div>
 				{:else if activeSettingsTab === "sync"}
 					<div class="space-y-4">
-						<div
-							class="flex items-center space-x-2 text-orange-400"
-						>
-							<Smartphone class="w-5 h-5" />
-							<h4 class="text-sm font-bold text-white">
-								iOS Shortcuts REST Sync Guide
-							</h4>
+						<div class="flex items-center justify-between">
+							<div
+								class="flex items-center space-x-2 text-orange-400"
+							>
+								<Smartphone class="w-5 h-5" />
+								<h4 class="text-sm font-bold text-white">
+									iOS Shortcuts REST Sync Guide
+								</h4>
+							</div>
+							<a
+								href="/guide?calendar={data.calendarName}"
+								target="_blank"
+								class="flex items-center space-x-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 px-3 py-1.5 rounded-xl border border-orange-500/20 transition cursor-pointer"
+							>
+								<span>Full Setup Guide</span>
+								<ExternalLink class="w-3.5 h-3.5" />
+							</a>
 						</div>
 						<p class="text-xs text-slate-400 leading-relaxed">
 							Sync your Apple Calendar events automatically via a
@@ -1906,9 +1950,13 @@
 									}}
 									class="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
 								>
-									{#if copiedEndpoint}<Check
+									{#if copiedEndpoint}
+										<Check
 											class="w-4 h-4 text-emerald-400"
-										/>{:else}<Copy class="w-4 h-4" />{/if}
+										/>
+									{:else}
+										<Copy class="w-4 h-4" />
+									{/if}
 								</button>
 							</div>
 						</div>
@@ -1941,11 +1989,12 @@
 									null,
 									2,
 								)}
-                            </pre>
+            </pre>
 						</div>
 					</div>
 				{:else if activeSettingsTab === "danger"}
 					<div class="space-y-4">
+						<!-- Purge All Events -->
 						<div
 							class="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start space-x-4"
 						>
@@ -1968,9 +2017,43 @@
 									<button
 										type="button"
 										onclick={handleDeleteAllEvents}
-										class="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/20 transition cursor-pointer"
+										class="px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/20 transition cursor-pointer"
 									>
 										Delete All Events Permanently
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<!-- Delete Entire Calendar -->
+						<div
+							class="p-4 rounded-2xl bg-red-950/40 border border-red-500/50 flex items-start space-x-4"
+						>
+							<Trash2
+								class="w-6 h-6 text-red-400 shrink-0 mt-0.5"
+							/>
+							<div class="flex-1 space-y-1">
+								<h4 class="text-sm font-bold text-red-400">
+									Delete Entire Calendar
+								</h4>
+								<p
+									class="text-xs text-slate-400 leading-relaxed"
+								>
+									This will permanently delete the calendar <strong
+										class="text-slate-200 capitalize"
+										>{data.calendarName}</strong
+									>, including all members, settings, and
+									events. You will be redirected to the home
+									page.
+								</p>
+								<div class="pt-3">
+									<button
+										type="button"
+										onclick={handleDeleteCalendar}
+										class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-lg shadow-red-600/30 transition cursor-pointer flex items-center space-x-1.5"
+									>
+										<Trash2 class="w-3.5 h-3.5" />
+										<span>Delete Calendar Permanently</span>
 									</button>
 								</div>
 							</div>

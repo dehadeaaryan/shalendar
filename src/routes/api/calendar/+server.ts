@@ -329,5 +329,15 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 		return json({ success: true });
 	}
 
+	if (action === 'delete_calendar') {
+		await db
+			.delete(schema.calendars)
+			.where(eq(schema.calendars.id, session.calendarId));
+
+		cookies.delete(`session_${calendarName.toLowerCase()}`, { path: '/' });
+
+		return json({ success: true, message: 'Calendar deleted successfully' });
+	}
+
 	return json({ error: 'Invalid action' }, { status: 400 });
 };
