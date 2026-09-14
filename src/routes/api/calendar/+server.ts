@@ -100,18 +100,44 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'All event fields are required' }, { status: 400 });
 		}
 
-		const [newEvent] = await db
-			.insert(schema.events)
-			.values({
-				partnerId,
-				title: title.trim(),
-				startTime: new Date(startTime).toISOString(),
-				endTime: new Date(endTime).toISOString(),
-				externalShortcutId: `web-${Date.now()}`
-			})
-			.returning();
+		const formattedStart = new Date(startTime).toISOString();
+		const formattedEnd = new Date(endTime).toISOString();
 
-		return json({ success: true, event: newEvent });
+		if (partnerId === 'BOTH') {
+			const partners = await db
+				.select()
+				.from(schema.partners)
+				.where(eq(schema.partners.calendarId, session.calendarId));
+
+			const eventsToInsert = partners.map((p, idx) => ({
+				calendarId: session.calendarId,
+				partnerId: p.id,
+				title: title.trim(),
+				startTime: formattedStart,
+				endTime: formattedEnd,
+				externalShortcutId: `web-${Date.now()}-${idx}`
+			}));
+
+			if (eventsToInsert.length > 0) {
+				const newEvents = await db.insert(schema.events).values(eventsToInsert).returning();
+				return json({ success: true, events: newEvents });
+			}
+			return json({ error: 'No members found on this calendar' }, { status: 400 });
+		} else {
+			const [newEvent] = await db
+				.insert(schema.events)
+				.values({
+					calendarId: session.calendarId,
+					partnerId,
+					title: title.trim(),
+					startTime: formattedStart,
+					endTime: formattedEnd,
+					externalShortcutId: `web-${Date.now()}`
+				})
+				.returning();
+
+			return json({ success: true, event: newEvent });
+		}
 	}
 
 	if (action === 'create_member') {
@@ -143,9 +169,78 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	return json({ error: 'Invalid action' }, { status: 400 });
 };
 
-// PATCH: Update member details
+// PATCH: Update member details OR Update event details
 export const PATCH: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json();
+	const action = body.action;
+
+	// --- Action: Update Event Details ---
+	if (action === 'update_event') {
+		const { calendarName, eventId, partnerId, title, startTime, endTime } = body;
+
+		const token = cookies.get(`session_${calendarName?.toLowerCase()}`);
+		const session = verifySessionToken(token || '', calendarName);
+
+		if (!session) {
+			return json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
+		if (!eventId || !partnerId || !title || !startTime || !endTime) {
+			return json({ error: 'All fields are required' }, { status: 400 });
+		}
+
+		const formattedStart = new Date(startTime).toISOString();
+		const formattedEnd = new Date(endTime).toISOString();
+
+		if (partnerId === 'BOTH') {
+			const partners = await db
+				.select()
+				.from(schema.partners)
+				.where(eq(schema.partners.calendarId, session.calendarId));
+
+			if (partners.length > 0) {
+				// Update the original event for the first partner
+				await db
+					.update(schema.events)
+					.set({
+						partnerId: partners[0].id,
+						title: title.trim(),
+						startTime: formattedStart,
+						endTime: formattedEnd
+					})
+					.where(eq(schema.events.id, eventId));
+
+				// Create matching events for the remaining partners
+				const remainingPartners = partners.slice(1);
+				const eventsToInsert = remainingPartners.map((p, idx) => ({
+					calendarId: session.calendarId,
+					partnerId: p.id,
+					title: title.trim(),
+					startTime: formattedStart,
+					endTime: formattedEnd,
+					externalShortcutId: `web-${Date.now()}-${idx}`
+				}));
+
+				if (eventsToInsert.length > 0) {
+					await db.insert(schema.events).values(eventsToInsert);
+				}
+			}
+		} else {
+			await db
+				.update(schema.events)
+				.set({
+					partnerId,
+					title: title.trim(),
+					startTime: formattedStart,
+					endTime: formattedEnd
+				})
+				.where(eq(schema.events.id, eventId));
+		}
+
+		return json({ success: true });
+	}
+
+	// --- Action: Update Member Settings ---
 	const { calendarName, partnerId, name, displayColor, timezone } = body;
 
 	const token = cookies.get(`session_${calendarName?.toLowerCase()}`);
@@ -185,7 +280,6 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	if (action === 'delete_all_events') {
-		// Fetch all partners belonging to this calendar
 		const partners = await db
 			.select({ id: schema.partners.id })
 			.from(schema.partners)
@@ -194,7 +288,6 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 		const partnerIds = partners.map(p => p.id);
 
 		if (partnerIds.length > 0) {
-			// Delete all events mapped to any of these partners
 			await db
 				.delete(schema.events)
 				.where(inArray(schema.events.partnerId, partnerIds));
@@ -208,7 +301,6 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Partner ID is required' }, { status: 400 });
 		}
 
-		// Security check: Ensure the partner actually belongs to the authenticated calendar
 		const partner = await db
 			.select()
 			.from(schema.partners)
@@ -218,7 +310,6 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Member not found on this calendar' }, { status: 404 });
 		}
 
-		// Delete their events first, then delete the member
 		await db.delete(schema.events).where(eq(schema.events.partnerId, partnerId));
 		await db.delete(schema.partners).where(eq(schema.partners.id, partnerId));
 

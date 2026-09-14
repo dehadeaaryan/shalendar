@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Authentication failed: Invalid calendar name or password' }, { status: 401 });
 	}
 
-	// 2. Extract & Validate Member
+	// 2. Extract & Validate Members (Supports Single Partner or BOTH)
 	const partnerName = body.partner_name || body.partnerName || body.partner || 'Person 1';
 	const partnerId = body.partner_id || body.partnerId;
 	const partnerColor = body.display_color || body.displayColor || body.color || '#f97316';
@@ -57,21 +57,33 @@ export const POST: RequestHandler = async ({ request }) => {
 		.from(schema.partners)
 		.where(eq(schema.partners.calendarId, calendar.id));
 
-	let partner = existingPartners.find(
-		(p) => (partnerId && p.id === partnerId) || p.name.toLowerCase() === String(partnerName).toLowerCase()
-	);
+	const isBoth = String(partnerName).trim().toUpperCase() === 'BOTH';
 
-	if (!partner) {
-		const [newPartner] = await db
-			.insert(schema.partners)
-			.values({
-				calendarId: calendar.id,
-				name: String(partnerName).trim(),
-				displayColor: existingPartners.length === 1 ? '#3b82f6' : partnerColor,
-				timezone: partnerTz
-			})
-			.returning();
-		partner = newPartner;
+	let targetPartners: typeof existingPartners = [];
+
+	if (isBoth) {
+		if (existingPartners.length === 0) {
+			return json({ error: 'No members exist for this calendar' }, { status: 400 });
+		}
+		targetPartners = existingPartners;
+	} else {
+		let partner = existingPartners.find(
+			(p) => (partnerId && p.id === partnerId) || p.name.toLowerCase() === String(partnerName).toLowerCase()
+		);
+
+		if (!partner) {
+			const [newPartner] = await db
+				.insert(schema.partners)
+				.values({
+					calendarId: calendar.id,
+					name: String(partnerName).trim(),
+					displayColor: existingPartners.length === 1 ? '#3b82f6' : partnerColor,
+					timezone: partnerTz
+				})
+				.returning();
+			partner = newPartner;
+		}
+		targetPartners = [partner];
 	}
 
 	// 3. Extract & Strict Type Check Events Array
@@ -127,36 +139,60 @@ export const POST: RequestHandler = async ({ request }) => {
 	let updatedCount = 0;
 	let deletedCount = 0;
 
-	if (rangeStart && rangeEnd) {
-		const existingEvents = await db
-			.select()
-			.from(schema.events)
-			.where(
-				and(
-					eq(schema.events.partnerId, partner.id),
-					gte(schema.events.startTime, rangeStart),
-					lte(schema.events.endTime, rangeEnd)
-				)
-			);
+	// 5. Sync Events for Each Target Partner
+	for (const targetPartner of targetPartners) {
+		if (rangeStart && rangeEnd) {
+			const existingEvents = await db
+				.select()
+				.from(schema.events)
+				.where(
+					and(
+						eq(schema.events.calendarId, calendar.id),
+						eq(schema.events.partnerId, targetPartner.id),
+						gte(schema.events.startTime, rangeStart),
+						lte(schema.events.endTime, rangeEnd)
+					)
+				);
 
-		const existingMap = new Map(existingEvents.map((e: any) => [e.externalShortcutId, e]));
-		const incomingIds = new Set(incomingEvents.map((e: any) => e.externalShortcutId));
+			const existingMap = new Map(existingEvents.map((e: any) => [e.externalShortcutId, e]));
+			const incomingIds = new Set(incomingEvents.map((e: any) => e.externalShortcutId));
 
-		for (const evt of incomingEvents) {
-			const existing = existingMap.get(evt.externalShortcutId);
-			if (existing) {
-				await db
-					.update(schema.events)
-					.set({
+			for (const evt of incomingEvents) {
+				const existing = existingMap.get(evt.externalShortcutId);
+				if (existing) {
+					await db
+						.update(schema.events)
+						.set({
+							title: evt.title,
+							startTime: evt.startTime,
+							endTime: evt.endTime
+						})
+						.where(eq(schema.events.id, existing.id));
+					updatedCount++;
+				} else {
+					await db.insert(schema.events).values({
+						calendarId: calendar.id,
+						partnerId: targetPartner.id,
 						title: evt.title,
 						startTime: evt.startTime,
-						endTime: evt.endTime
-					})
-					.where(eq(schema.events.id, existing.id));
-				updatedCount++;
-			} else {
+						endTime: evt.endTime,
+						externalShortcutId: evt.externalShortcutId
+					});
+					createdCount++;
+				}
+			}
+
+			for (const existing of existingEvents) {
+				if (existing.externalShortcutId && !incomingIds.has(existing.externalShortcutId)) {
+					await db.delete(schema.events).where(eq(schema.events.id, existing.id));
+					deletedCount++;
+				}
+			}
+		} else if (incomingEvents.length > 0) {
+			for (const evt of incomingEvents) {
 				await db.insert(schema.events).values({
-					partnerId: partner.id,
+					calendarId: calendar.id,
+					partnerId: targetPartner.id,
 					title: evt.title,
 					startTime: evt.startTime,
 					endTime: evt.endTime,
@@ -165,34 +201,16 @@ export const POST: RequestHandler = async ({ request }) => {
 				createdCount++;
 			}
 		}
-
-		for (const existing of existingEvents) {
-			if (existing.externalShortcutId && !incomingIds.has(existing.externalShortcutId)) {
-				await db.delete(schema.events).where(eq(schema.events.id, existing.id));
-				deletedCount++;
-			}
-		}
-	} else if (incomingEvents.length > 0) {
-		for (const evt of incomingEvents) {
-			await db.insert(schema.events).values({
-				partnerId: partner.id,
-				title: evt.title,
-				startTime: evt.startTime,
-				endTime: evt.endTime,
-				externalShortcutId: evt.externalShortcutId
-			});
-			createdCount++;
-		}
 	}
 
 	return json({
 		success: true,
-		partner: {
-			id: partner.id,
-			name: partner.name,
-			displayColor: partner.displayColor,
-			timezone: partner.timezone
-		},
+		partners: targetPartners.map((p) => ({
+			id: p.id,
+			name: p.name,
+			displayColor: p.displayColor,
+			timezone: p.timezone
+		})),
 		range: {
 			start: rangeStart,
 			end: rangeEnd

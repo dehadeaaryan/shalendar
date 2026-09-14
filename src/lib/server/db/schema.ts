@@ -22,12 +22,14 @@ export const partners = sqliteTable('partners', {
 
 export const events = sqliteTable('events', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
 	partnerId: text('partner_id').notNull().references(() => partners.id, { onDelete: 'cascade' }),
 	title: text('title').notNull(),
 	startTime: text('start_time').notNull(),
 	endTime: text('end_time').notNull(),
 	externalShortcutId: text('external_shortcut_id')
 }, (table) => [
+	index('event_calendar_idx').on(table.calendarId),
 	index('event_partner_idx').on(table.partnerId),
 	index('event_shortcut_idx').on(table.externalShortcutId),
 	index('event_time_idx').on(table.startTime, table.endTime)
