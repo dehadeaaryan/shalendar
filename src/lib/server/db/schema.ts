@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 export const calendars = sqliteTable('calendars', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -20,20 +20,25 @@ export const partners = sqliteTable('partners', {
 	index('partner_calendar_idx').on(table.calendarId)
 ]);
 
-export const events = sqliteTable('events', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
-	partnerId: text('partner_id').notNull().references(() => partners.id, { onDelete: 'cascade' }),
-	title: text('title').notNull(),
-	startTime: text('start_time').notNull(),
-	endTime: text('end_time').notNull(),
-	externalShortcutId: text('external_shortcut_id')
-}, (table) => [
-	index('event_calendar_idx').on(table.calendarId),
-	index('event_partner_idx').on(table.partnerId),
-	index('event_shortcut_idx').on(table.externalShortcutId),
-	index('event_time_idx').on(table.startTime, table.endTime)
-]);
+export const events = sqliteTable(
+	'events',
+	{
+		id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+		calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
+		partnerId: text('partner_id').notNull().references(() => partners.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		startTime: text('start_time').notNull(),
+		endTime: text('end_time').notNull(),
+		externalShortcutId: text('external_shortcut_id'),
+		createdAt: text('created_at').notNull().default(sql`(CURRENT_TIMESTAMP)`)
+	},
+	(table) => ({
+		calendarIdx: index('event_calendar_idx').on(table.calendarId),
+		partnerIdx: index('event_partner_idx').on(table.partnerId),
+		shortcutIdx: index('event_shortcut_idx').on(table.externalShortcutId),
+		timeIdx: index('event_time_idx').on(table.startTime, table.endTime)
+	})
+);
 
 export const calendarsRelations = relations(calendars, ({ many }) => ({
 	partners: many(partners)

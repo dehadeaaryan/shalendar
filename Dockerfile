@@ -27,11 +27,14 @@ ENV DATABASE_URL=/app/data/shalendar.db
 # Create directory for persistent SQLite database storage
 RUN mkdir -p /app/data
 
-# Copy production dependencies and built server
+# Copy production dependencies, drizzle configs, and built server
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
 
 EXPOSE 3000
 
-CMD ["node", "build"]
+# Push any pending schema changes (like created_at default) then start the app
+CMD ["sh", "-c", "npx drizzle-kit push && node build"]
