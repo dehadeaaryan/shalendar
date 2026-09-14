@@ -1,11 +1,11 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db, schema } from '$lib/server/db';
 import { hashPassword, authenticateCalendar, generateSessionToken, getCalendarByName, verifySessionToken } from '$lib/server/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 
 const DEFAULT_COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
 
-// POST: Create Calendar OR Login OR Create Event OR Logout
+// POST: Create Calendar OR Login OR Create Event OR Logout OR Create Member
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json();
 	const action = body.action;
@@ -114,6 +114,32 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		return json({ success: true, event: newEvent });
 	}
 
+	if (action === 'create_member') {
+		const { calendarName, name, displayColor, timezone } = body;
+		const token = cookies.get(`session_${calendarName?.toLowerCase()}`);
+		const session = verifySessionToken(token || '', calendarName);
+
+		if (!session) {
+			return json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
+		if (!name) {
+			return json({ error: 'Name is required' }, { status: 400 });
+		}
+
+		const [newMember] = await db
+			.insert(schema.partners)
+			.values({
+				calendarId: session.calendarId,
+				name: name.trim(),
+				displayColor: displayColor || '#3b82f6',
+				timezone: timezone || 'UTC'
+			})
+			.returning();
+
+		return json({ success: true, member: newMember });
+	}
+
 	return json({ error: 'Invalid action' }, { status: 400 });
 };
 
@@ -146,10 +172,10 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 	return json({ success: true });
 };
 
-// DELETE: Delete event
+// DELETE: Delete event, delete member, or delete all events
 export const DELETE: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json();
-	const { calendarName, eventId } = body;
+	const { action, calendarName, eventId, partnerId } = body;
 
 	const token = cookies.get(`session_${calendarName?.toLowerCase()}`);
 	const session = verifySessionToken(token || '', calendarName);
@@ -158,7 +184,54 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	await db.delete(schema.events).where(eq(schema.events.id, eventId));
+	if (action === 'delete_all_events') {
+		// Fetch all partners belonging to this calendar
+		const partners = await db
+			.select({ id: schema.partners.id })
+			.from(schema.partners)
+			.where(eq(schema.partners.calendarId, session.calendarId));
 
-	return json({ success: true });
+		const partnerIds = partners.map(p => p.id);
+
+		if (partnerIds.length > 0) {
+			// Delete all events mapped to any of these partners
+			await db
+				.delete(schema.events)
+				.where(inArray(schema.events.partnerId, partnerIds));
+		}
+
+		return json({ success: true, message: 'All events deleted successfully' });
+	}
+
+	if (action === 'delete_member') {
+		if (!partnerId) {
+			return json({ error: 'Partner ID is required' }, { status: 400 });
+		}
+
+		// Security check: Ensure the partner actually belongs to the authenticated calendar
+		const partner = await db
+			.select()
+			.from(schema.partners)
+			.where(and(eq(schema.partners.id, partnerId), eq(schema.partners.calendarId, session.calendarId)));
+
+		if (partner.length === 0) {
+			return json({ error: 'Member not found on this calendar' }, { status: 404 });
+		}
+
+		// Delete their events first, then delete the member
+		await db.delete(schema.events).where(eq(schema.events.partnerId, partnerId));
+		await db.delete(schema.partners).where(eq(schema.partners.id, partnerId));
+
+		return json({ success: true, message: 'Member and events deleted successfully' });
+	}
+
+	if (action === 'delete_event' || !action) {
+		if (!eventId) {
+			return json({ error: 'Event ID is required' }, { status: 400 });
+		}
+		await db.delete(schema.events).where(eq(schema.events.id, eventId));
+		return json({ success: true });
+	}
+
+	return json({ error: 'Invalid action' }, { status: 400 });
 };

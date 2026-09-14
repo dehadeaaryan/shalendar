@@ -16,7 +16,8 @@
 		Trash2,
 		Users,
 		Clock,
-		ExternalLink
+		ExternalLink,
+		Smartphone
 	} from 'lucide-svelte';
 
 	const COMMON_TIMEZONES = [
@@ -178,6 +179,13 @@
 			</div>
 		</div>
 		<div class="hidden sm:flex items-center space-x-3">
+			<a
+				href="/help"
+				class="text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 transition flex items-center space-x-1.5"
+			>
+				<Smartphone class="w-3.5 h-3.5" />
+				<span>Setup Guide</span>
+			</a>
 			<button
 				type="button"
 				onclick={() => { activeTab = 'open'; document.getElementById('auth-form')?.scrollIntoView({ behavior: 'smooth' }); }}
@@ -488,9 +496,16 @@
 					<Zap class="w-6 h-6" />
 				</div>
 				<h3 class="text-lg font-bold text-white mb-2">iOS Shortcuts REST Sync</h3>
-				<p class="text-slate-400 text-sm leading-relaxed">
+				<p class="text-slate-400 text-sm leading-relaxed mb-4">
 					Sync Apple Calendar events automatically via a single `/api/sync` POST request right from your iPhone.
 				</p>
+				<a
+					href="/help"
+					class="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition"
+				>
+					<Smartphone class="w-3.5 h-3.5" />
+					<span>View Setup Guide →</span>
+				</a>
 			</div>
 		</div>
 	</section>
