@@ -28,7 +28,7 @@ export const events = sqliteTable('events', {
 	startTime: text('start_time').notNull(),
 	endTime: text('end_time').notNull(),
 	externalShortcutId: text('external_shortcut_id'),
-	createdAt: text('created_at').notNull().default(sql`(CURRENT_TIMESTAMP)`)
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 }, (table) => [
 	index('event_calendar_idx').on(table.calendarId),
 	index('event_partner_idx').on(table.partnerId),
