@@ -47,10 +47,9 @@
 		"Australia/Sydney",
 	];
 
-	const START_HOUR = 0;
-	const END_HOUR = 24;
-	const TOTAL_HOURS = END_HOUR - START_HOUR;
 	const HOUR_HEIGHT = 56;
+	const MIN_START_HOUR = 8; // 8:00 AM
+	const MIN_END_HOUR = 14; // 2:00 PM (14:00)
 
 	let { data } = $props();
 
@@ -488,9 +487,42 @@
 		}
 	}
 
-	function getEventTopPx(startTimeISO: string, targetTz: string): number {
+	// Dynamic grid range calculation: default window is 8 AM to 2 PM (14:00),
+	// but dynamically expands to earliest start and latest end + 1 hr padding.
+	function getGridRangeForDay(dayDate: Date): {
+		startHour: number;
+		endHour: number;
+		totalHours: number;
+	} {
+		const dayEvents = getEventsForDay(dayDate);
+		let startHour = MIN_START_HOUR;
+		let endHour = MIN_END_HOUR;
+
+		for (const evt of dayEvents) {
+			const start = getDecimalHourInTimezone(
+				evt.startTime,
+				activeTimezone,
+			);
+			const end = getDecimalHourInTimezone(evt.endTime, activeTimezone);
+
+			startHour = Math.min(startHour, Math.max(0, Math.floor(start) - 1));
+			endHour = Math.max(endHour, Math.min(24, Math.ceil(end) + 1));
+		}
+
+		return {
+			startHour,
+			endHour,
+			totalHours: endHour - startHour,
+		};
+	}
+
+	function getEventTopPx(
+		startTimeISO: string,
+		targetTz: string,
+		startHour: number,
+	): number {
 		return (
-			(getDecimalHourInTimezone(startTimeISO, targetTz) - START_HOUR) *
+			(getDecimalHourInTimezone(startTimeISO, targetTz) - startHour) *
 			HOUR_HEIGHT
 		);
 	}
@@ -710,14 +742,6 @@
 		"November",
 		"December",
 	];
-	const hoursList = Array.from(
-		{ length: TOTAL_HOURS + 1 },
-		(_, i) => START_HOUR + i,
-	);
-
-	function autoScrollGrid(node: HTMLElement) {
-		node.scrollTop = Math.max(0, (new Date().getHours() - 1) * HOUR_HEIGHT);
-	}
 </script>
 
 <div
@@ -804,7 +828,7 @@
 							class="flex items-center space-x-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-xl shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 active:scale-95 transition-all cursor-pointer"
 						>
 							<Plus class="w-4 h-4 shrink-0" />
-							<span class="none sm:inline">Add Event</span>
+							<span class="hidden sm:inline">Add Event</span>
 						</button>
 
 						<button
@@ -1014,6 +1038,7 @@
 
 				<!-- VIEW 1: TODAY GRID -->
 				{#if viewMode === "today"}
+					{@const range = getGridRangeForDay(currentDate)}
 					<div
 						class="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-800/80 p-4 space-y-4 shadow-xl"
 					>
@@ -1041,8 +1066,7 @@
 						</div>
 
 						<div
-							class="max-h-[650px] overflow-y-auto overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-inner"
-							use:autoScrollGrid
+							class="overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-inner"
 						>
 							<div
 								class="min-w-[320px] sm:min-w-[700px] grid grid-cols-[44px_1fr] sm:grid-cols-[60px_1fr] relative"
@@ -1053,7 +1077,7 @@
 									<div
 										class="h-10 bg-slate-900/90 border-b border-slate-800/80 sticky top-0 z-20"
 									></div>
-									{#each hoursList.slice(0, TOTAL_HOURS) as hr}
+									{#each Array.from({ length: range.totalHours }, (_, i) => range.startHour + i) as hr}
 										<div
 											class="h-[56px] px-1.5 text-[10px] font-mono text-slate-500 flex items-start pt-1 justify-end"
 										>
@@ -1089,10 +1113,10 @@
 											</div>
 											<div
 												class="relative"
-												style="height: {TOTAL_HOURS *
+												style="height: {range.totalHours *
 													HOUR_HEIGHT}px"
 											>
-												{#each hoursList.slice(0, TOTAL_HOURS) as _, idx}
+												{#each Array.from( { length: range.totalHours }, ) as _, idx}
 													<div
 														class="absolute w-full border-b border-slate-800/30"
 														style="top: {idx *
@@ -1108,6 +1132,7 @@
 														style="top: {getEventTopPx(
 															evt.startTime,
 															activeTimezone,
+															range.startHour,
 														)}px; height: {getEventHeightPx(
 															evt.startTime,
 															evt.endTime,
@@ -1182,6 +1207,7 @@
 									day,
 									dayEvents.length,
 								)}
+								{@const range = getGridRangeForDay(day)}
 								<div
 									class={`rounded-2xl border transition-all ${isSameDay(day, new Date()) ? "border-orange-500/50 bg-slate-900/80 shadow-md shadow-orange-500/5" : "border-slate-800/80 bg-slate-950/40"}`}
 								>
@@ -1229,8 +1255,7 @@
 											class="p-3 sm:p-4 pt-0 border-t border-slate-800/60"
 										>
 											<div
-												class="max-h-[480px] overflow-y-auto overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/80 mt-3 shadow-inner"
-												use:autoScrollGrid
+												class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/80 mt-3 shadow-inner"
 											>
 												<div
 													class="min-w-[320px] sm:min-w-[650px] grid grid-cols-[40px_1fr] sm:grid-cols-[50px_1fr] relative"
@@ -1241,7 +1266,7 @@
 														<div
 															class="h-8 bg-slate-900/90 border-b border-slate-800/80 sticky top-0 z-20"
 														></div>
-														{#each hoursList.slice(0, TOTAL_HOURS) as hr}
+														{#each Array.from({ length: range.totalHours }, (_, i) => range.startHour + i) as hr}
 															<div
 																class="h-[56px] px-1 text-[9px] font-mono text-slate-500 flex items-start pt-1 justify-end"
 															>
@@ -1278,10 +1303,10 @@
 																</div>
 																<div
 																	class="relative"
-																	style="height: {TOTAL_HOURS *
+																	style="height: {range.totalHours *
 																		HOUR_HEIGHT}px"
 																>
-																	{#each hoursList.slice(0, TOTAL_HOURS) as _, idx}
+																	{#each Array.from( { length: range.totalHours }, ) as _, idx}
 																		<div
 																			class="absolute w-full border-b border-slate-800/30"
 																			style="top: {idx *
@@ -1299,6 +1324,7 @@
 																			style="top: {getEventTopPx(
 																				evt.startTime,
 																				activeTimezone,
+																				range.startHour,
 																			)}px; height: {getEventHeightPx(
 																				evt.startTime,
 																				evt.endTime,
@@ -1913,7 +1939,7 @@
 								</h4>
 							</div>
 							<a
-								href="/guide?calendar={data.calendarName}"
+								href="/help?calendar={data.calendarName}"
 								target="_blank"
 								class="flex items-center space-x-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 px-3 py-1.5 rounded-xl border border-orange-500/20 transition cursor-pointer"
 							>
