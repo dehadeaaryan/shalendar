@@ -102,6 +102,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		const formattedStart = new Date(startTime).toISOString();
 		const formattedEnd = new Date(endTime).toISOString();
+		const nowIso = new Date().toISOString();
 
 		if (partnerId === 'BOTH') {
 			const partners = await db
@@ -115,7 +116,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				title: title.trim(),
 				startTime: formattedStart,
 				endTime: formattedEnd,
-				externalShortcutId: `web-${Date.now()}-${idx}`
+				externalShortcutId: `web-${Date.now()}-${idx}`,
+				createdAt: nowIso
 			}));
 
 			if (eventsToInsert.length > 0) {
@@ -132,7 +134,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 					title: title.trim(),
 					startTime: formattedStart,
 					endTime: formattedEnd,
-					externalShortcutId: `web-${Date.now()}`
+					externalShortcutId: `web-${Date.now()}`,
+					createdAt: nowIso
 				})
 				.returning();
 
@@ -191,6 +194,7 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 
 		const formattedStart = new Date(startTime).toISOString();
 		const formattedEnd = new Date(endTime).toISOString();
+		const nowIso = new Date().toISOString();
 
 		if (partnerId === 'BOTH') {
 			const partners = await db
@@ -218,7 +222,8 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 					title: title.trim(),
 					startTime: formattedStart,
 					endTime: formattedEnd,
-					externalShortcutId: `web-${Date.now()}-${idx}`
+					externalShortcutId: `web-${Date.now()}-${idx}`,
+					createdAt: nowIso
 				}));
 
 				if (eventsToInsert.length > 0) {

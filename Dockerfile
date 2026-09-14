@@ -6,7 +6,7 @@ WORKDIR /app
 # Install build tools required for native C++ addons (better-sqlite3)
 RUN apk add --no-cache python3 make g++
 
-# Copy package manifests and install dependencies
+# Copy package manifests and install all dependencies
 COPY package*.json ./
 RUN npm install
 
@@ -27,14 +27,13 @@ ENV DATABASE_URL=/app/data/shalendar.db
 # Create directory for persistent SQLite database storage
 RUN mkdir -p /app/data
 
-# Copy production dependencies, drizzle configs, and built server
+# Copy production dependencies and built app
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
-COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
-COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
+COPY --from=builder /app/src/lib/server/db ./src/lib/server/db
 
 EXPOSE 3000
 
-# Push any pending schema changes non-interactively, then start the app
-CMD ["sh", "-c", "./node_modules/.bin/drizzle-kit push --force && node build"]
+# Start server
+CMD ["node", "build"]

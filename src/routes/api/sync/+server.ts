@@ -138,6 +138,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	let createdCount = 0;
 	let updatedCount = 0;
 	let deletedCount = 0;
+	const nowIso = new Date().toISOString();
 
 	// 5. Sync Events for Each Target Partner
 	for (const targetPartner of targetPartners) {
@@ -176,7 +177,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						title: evt.title,
 						startTime: evt.startTime,
 						endTime: evt.endTime,
-						externalShortcutId: evt.externalShortcutId
+						externalShortcutId: evt.externalShortcutId,
+						createdAt: nowIso
 					});
 					createdCount++;
 				}
@@ -196,7 +198,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					title: evt.title,
 					startTime: evt.startTime,
 					endTime: evt.endTime,
-					externalShortcutId: evt.externalShortcutId
+					externalShortcutId: evt.externalShortcutId,
+					createdAt: nowIso
 				});
 				createdCount++;
 			}
