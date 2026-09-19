@@ -62,6 +62,7 @@
 	// Calendar Navigation
 	let currentDate = $state(new Date());
 	let viewMode = $state<"month" | "week" | "today" | "agenda">("week");
+	let currentTime = $state(new Date());
 
 	// Timezone Perspective State
 	let selectedTimezonePerspective = $state<string>("LOCAL");
@@ -101,6 +102,13 @@
 
 	// Copy State
 	let copiedEndpoint = $state(false);
+
+	$effect(() => {
+		const interval = setInterval(() => {
+			currentTime = new Date();
+		}, 60000);
+		return () => clearInterval(interval);
+	});
 
 	$effect(() => {
 		if (data.partners.length > 0) {
@@ -429,6 +437,13 @@
 	function isDayCollapsed(dayDate: Date, eventCount: number): boolean {
 		const key = getDayKey(dayDate);
 		if (collapsedDays[key] !== undefined) return collapsedDays[key];
+
+		const now = new Date();
+		now.setHours(0, 0, 0, 0);
+		const check = new Date(dayDate);
+		check.setHours(0, 0, 0, 0);
+
+		if (check.getTime() < now.getTime()) return true;
 		return eventCount === 0;
 	}
 
@@ -487,8 +502,6 @@
 		}
 	}
 
-	// Dynamic grid range calculation: default window is 8 AM to 2 PM (14:00),
-	// but dynamically expands to earliest start and latest end + 1 hr padding.
 	function getGridRangeForDay(dayDate: Date): {
 		startHour: number;
 		endHour: number;
@@ -660,42 +673,51 @@
 				new Date(a.startTime).getTime() -
 				new Date(b.startTime).getTime(),
 		);
-		const colEnds: number[] = [];
-		const evtCol = new Map<any, number>();
+
+		const result: { evt: any; col: number; totalCols: number }[] = [];
+		let columns: number[] = [];
+		let currentGroup: { evt: any; col: number }[] = [];
+		let lastEventEnd = 0;
 
 		for (const evt of sorted) {
 			const start = new Date(evt.startTime).getTime();
+			const end = new Date(evt.endTime).getTime();
+
+			if (currentGroup.length > 0 && start >= lastEventEnd) {
+				const totalCols = columns.length;
+				for (const item of currentGroup) {
+					result.push({ evt: item.evt, col: item.col, totalCols });
+				}
+				columns = [];
+				currentGroup = [];
+				lastEventEnd = 0;
+			}
+
 			let placed = false;
-			for (let c = 0; c < colEnds.length; c++) {
-				if (colEnds[c] <= start) {
-					colEnds[c] = new Date(evt.endTime).getTime();
-					evtCol.set(evt, c);
+			for (let c = 0; c < columns.length; c++) {
+				if (columns[c] <= start) {
+					columns[c] = end;
+					currentGroup.push({ evt, col: c });
 					placed = true;
 					break;
 				}
 			}
 			if (!placed) {
-				evtCol.set(evt, colEnds.length);
-				colEnds.push(new Date(evt.endTime).getTime());
+				currentGroup.push({ evt, col: columns.length });
+				columns.push(end);
+			}
+
+			lastEventEnd = Math.max(lastEventEnd, end);
+		}
+
+		if (currentGroup.length > 0) {
+			const totalCols = columns.length;
+			for (const item of currentGroup) {
+				result.push({ evt: item.evt, col: item.col, totalCols });
 			}
 		}
 
-		return sorted.map((evt) => {
-			const col = evtCol.get(evt)!;
-			const evtStart = new Date(evt.startTime).getTime();
-			const evtEnd = new Date(evt.endTime).getTime();
-			let maxCol = col;
-			for (const other of sorted) {
-				if (other === evt) continue;
-				if (
-					new Date(other.startTime).getTime() < evtEnd &&
-					new Date(other.endTime).getTime() > evtStart
-				) {
-					maxCol = Math.max(maxCol, evtCol.get(other)!);
-				}
-			}
-			return { evt, col, totalCols: maxCol + 1 };
-		});
+		return result;
 	}
 
 	function prevPeriod() {
@@ -752,7 +774,7 @@
 		class="border-b border-slate-800/80 bg-[#080c14]/90 backdrop-blur-xl sticky top-0 z-40 transition-all"
 	>
 		<div
-			class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+			class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0"
 		>
 			<div class="flex items-center justify-between w-full sm:w-auto">
 				<div class="flex items-center space-x-3">
@@ -785,19 +807,19 @@
 
 			{#if data.isAuthenticated}
 				<div
-					class="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3 text-xs w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60"
+					class="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-3 text-xs w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800/60"
 				>
 					<div
-						class="flex items-center space-x-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800/80 flex-1 sm:flex-none max-w-[55%] sm:max-w-none shadow-inner"
+						class="flex items-center w-full sm:w-auto justify-center space-x-2 bg-slate-900/90 px-3 py-2 sm:py-1.5 rounded-xl border border-slate-800/80 shadow-inner"
 					>
-						<Globe class="w-3.5 h-3.5 text-orange-400 shrink-0" />
+						<Globe class="w-4 h-4 text-orange-400 shrink-0" />
 						<span
 							class="hidden md:inline text-slate-400 font-medium shrink-0"
 							>View in:</span
 						>
 						<select
 							bind:value={selectedTimezonePerspective}
-							class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer w-full truncate text-[11px] sm:text-xs"
+							class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer w-full text-center sm:text-left text-sm sm:text-xs"
 							aria-label="Select timezone view"
 						>
 							<option
@@ -821,37 +843,37 @@
 						</select>
 					</div>
 
-					<div class="flex items-center space-x-2 shrink-0">
+					<div
+						class="flex items-center justify-center space-x-2 w-full sm:w-auto shrink-0"
+					>
 						<button
 							type="button"
 							onclick={() => (showAddModal = true)}
-							class="flex items-center space-x-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-xl shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 active:scale-95 transition-all cursor-pointer"
+							class="flex-1 sm:flex-none flex items-center justify-center space-x-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-sm sm:text-xs font-semibold px-4 py-2 sm:py-1.5 rounded-xl shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 active:scale-95 transition-all cursor-pointer"
 						>
 							<Plus class="w-4 h-4 shrink-0" />
-							<span class="hidden sm:inline">Add Event</span>
+							<span>Add Event</span>
 						</button>
 
 						<button
 							type="button"
 							onclick={() => (showSettingsModal = true)}
-							class="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800/80 transition-all cursor-pointer active:scale-95"
+							class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800/80 transition-all flex items-center justify-center cursor-pointer active:scale-95"
 							title="Calendar Settings"
 							aria-label="Calendar Settings"
 						>
-							<Settings class="w-4 h-4" />
+							<Settings class="w-5 h-5 sm:w-4 sm:h-4" />
 						</button>
 
 						<button
 							type="button"
 							onclick={handleLockCalendar}
-							class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
+							class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
 							title="Lock Calendar"
 							aria-label="Lock Calendar"
 						>
-							<Lock class="w-4 h-4 shrink-0" />
-							<span class="hidden md:inline text-xs font-semibold"
-								>Lock</span
-							>
+							<Lock class="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+							<span class="text-xs font-semibold">Lock</span>
 						</button>
 					</div>
 				</div>
@@ -1094,7 +1116,9 @@
 									)}, minmax(0, 1fr))"
 								>
 									{#each data.partners as member}
-										<div class="flex flex-col">
+										<div
+											class="flex flex-col relative overflow-hidden"
+										>
 											<div
 												class="h-10 px-3 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md flex items-center justify-between sticky top-0 z-20"
 											>
@@ -1123,12 +1147,35 @@
 															HOUR_HEIGHT}px; height: {HOUR_HEIGHT}px"
 													></div>
 												{/each}
+
+												{#if isSameDayInTz(currentDate, currentTime.toISOString(), activeTimezone)}
+													{@const topPx =
+														getEventTopPx(
+															currentTime.toISOString(),
+															activeTimezone,
+															range.startHour,
+														)}
+													{#if topPx >= 0 && topPx <= range.totalHours * HOUR_HEIGHT}
+														<div
+															class="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+															style="top: {topPx}px;"
+														>
+															<div
+																class="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-[0_0_6px_rgba(239,68,68,0.8)]"
+															></div>
+															<div
+																class="h-[2px] bg-red-500/80 w-full shadow-[0_0_6px_rgba(239,68,68,0.5)]"
+															></div>
+														</div>
+													{/if}
+												{/if}
+
 												{#each computeEventColumns(getEventsForDayAndMember(currentDate, member.id)) as { evt, col, totalCols }}
 													<button
 														type="button"
 														onclick={() =>
 															openEventModal(evt)}
-														class="absolute p-2 rounded-xl text-xs font-medium overflow-hidden shadow-md flex flex-col justify-between text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
+														class="absolute p-2 rounded-xl text-xs font-medium overflow-hidden shadow-md flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
 														style="top: {getEventTopPx(
 															evt.startTime,
 															activeTimezone,
@@ -1143,11 +1190,11 @@
 															100}% - 4px); background-color: {member.displayColor}22; border-left: 3.5px solid {member.displayColor}; border-top: 1px solid {member.displayColor}44"
 													>
 														<span
-															class="font-bold text-white truncate text-[11px] leading-tight"
+															class="font-bold text-white truncate text-[11px] leading-tight w-full"
 															>{evt.title}</span
 														>
 														<span
-															class="text-[9px] text-slate-300 font-mono truncate opacity-90"
+															class="text-[9px] text-slate-300 font-mono truncate opacity-90 w-full mt-1"
 														>
 															{formatInTimezone(
 																evt.startTime,
@@ -1287,7 +1334,7 @@
 													>
 														{#each data.partners as member}
 															<div
-																class="flex flex-col"
+																class="flex flex-col relative overflow-hidden"
 															>
 																<div
 																	class="h-8 px-2 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md flex items-center sticky top-0 z-20"
@@ -1313,6 +1360,29 @@
 																				HOUR_HEIGHT}px; height: {HOUR_HEIGHT}px"
 																		></div>
 																	{/each}
+
+																	{#if isSameDayInTz(day, currentTime.toISOString(), activeTimezone)}
+																		{@const topPx =
+																			getEventTopPx(
+																				currentTime.toISOString(),
+																				activeTimezone,
+																				range.startHour,
+																			)}
+																		{#if topPx >= 0 && topPx <= range.totalHours * HOUR_HEIGHT}
+																			<div
+																				class="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+																				style="top: {topPx}px;"
+																			>
+																				<div
+																					class="w-1.5 h-1.5 rounded-full bg-red-500 -ml-[3px] shadow-[0_0_4px_rgba(239,68,68,0.8)]"
+																				></div>
+																				<div
+																					class="h-[2px] bg-red-500/80 w-full shadow-[0_0_4px_rgba(239,68,68,0.5)]"
+																				></div>
+																			</div>
+																		{/if}
+																	{/if}
+
 																	{#each computeEventColumns(getEventsForDayAndMember(day, member.id)) as { evt, col, totalCols }}
 																		<button
 																			type="button"
@@ -1320,7 +1390,7 @@
 																				openEventModal(
 																					evt,
 																				)}
-																			class="absolute p-1 rounded-lg text-[11px] font-medium flex flex-col justify-between text-left transition-all hover:brightness-125 cursor-pointer z-10"
+																			class="absolute p-1 rounded-lg text-[11px] font-medium overflow-hidden flex flex-col justify-start text-left transition-all hover:brightness-125 cursor-pointer z-10"
 																			style="top: {getEventTopPx(
 																				evt.startTime,
 																				activeTimezone,
@@ -1335,7 +1405,7 @@
 																				100}% - 4px); background-color: {member.displayColor}22; border-left: 3px solid {member.displayColor}; border-top: 1px solid {member.displayColor}44"
 																		>
 																			<span
-																				class="font-bold text-white truncate text-[10px]"
+																				class="font-bold text-white truncate text-[10px] w-full"
 																				>{evt.title}</span
 																			>
 																		</button>
@@ -1374,7 +1444,7 @@
 						>
 							{#each monthDays as day}
 								<div
-									class={`min-h-[110px] p-2 flex flex-col transition-all ${day.isCurrentMonth ? "bg-slate-900/20" : "bg-slate-950/90 text-slate-600"}`}
+									class={`min-h-[110px] p-2 flex flex-col transition-all ${isSameDay(day.date, new Date()) ? "bg-orange-500/10 border border-orange-500/40 ring-1 ring-orange-500/20" : day.isCurrentMonth ? "bg-slate-900/20" : "bg-slate-950/90 text-slate-600"}`}
 								>
 									<div
 										class="mb-1.5 flex justify-between items-center"
