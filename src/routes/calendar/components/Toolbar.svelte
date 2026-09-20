@@ -55,10 +55,10 @@
 </script>
 
 <div
-    class="bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4 shadow-lg"
+    class="bg-slate-900/60 backdrop-blur-xl p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-2 shadow-lg"
 >
     <div
-        class="flex items-center justify-between sm:justify-start space-x-2 sm:space-x-4 w-full sm:w-auto"
+        class="flex items-center justify-between sm:justify-start gap-x-1 sm:gap-x-2 w-full sm:w-auto"
     >
         <h2
             class="text-base sm:text-xl font-bold text-white tracking-tight truncate"
@@ -88,7 +88,7 @@
         </h2>
 
         <div
-            class="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80 shrink-0"
+            class="flex items-center gap-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80 shrink-0"
         >
             <button
                 type="button"
@@ -116,28 +116,28 @@
     >
         <button
             onclick={() => (calState.viewMode = "today")}
-            class={`py-1.5 px-3 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "today" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "text-slate-400 hover:text-slate-200"}`}
+            class={`py-1.5 px-2 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "today" ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "text-slate-400 hover:text-slate-200"}`}
             ><Sun class="w-3.5 h-3.5 shrink-0" /><span class={`hidden md:block`}
                 >Today</span
             ></button
         >
         <button
             onclick={() => (calState.viewMode = "week")}
-            class={`py-1.5 px-3 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "week" ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "text-slate-400 hover:text-slate-200"}`}
+            class={`py-1.5 px-2 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "week" ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "text-slate-400 hover:text-slate-200"}`}
             ><Columns4 class="w-3.5 h-3.5 shrink-0" /><span
                 class={`hidden md:block`}>Week</span
             ></button
         >
         <button
             onclick={() => (calState.viewMode = "month")}
-            class={`py-1.5 px-3 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "month" ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "text-slate-400 hover:text-slate-200"}`}
+            class={`py-1.5 px-2 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "month" ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "text-slate-400 hover:text-slate-200"}`}
             ><CalendarDays class="w-3.5 h-3.5 shrink-0" /><span
                 class={`hidden md:block`}>Month</span
             ></button
         >
         <button
             onclick={() => (calState.viewMode = "agenda")}
-            class={`py-1.5 px-3 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "agenda" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "text-slate-400 hover:text-slate-200"}`}
+            class={`py-1.5 px-2 rounded-lg font-semibold transition flex items-center justify-center gap-1.5 ${calState.viewMode === "agenda" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "text-slate-400 hover:text-slate-200"}`}
             ><List class="w-3.5 h-3.5 shrink-0" /><span
                 class={`hidden md:block`}>Agenda</span
             ></button
