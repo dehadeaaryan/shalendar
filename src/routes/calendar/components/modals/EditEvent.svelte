@@ -1,4 +1,5 @@
 <script lang="ts">
+ import Modal from "$lib/components/Modal.svelte";
     import { calState } from "../../state.svelte";
     import {
         formatDateTimeInput,
@@ -94,12 +95,9 @@
         }
     }
 </script>
-
-<div
-    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 transition-all"
->
+<Modal label="Event details" onClose={() => { calState.selectedEvent = null; }}>
     <div
-        class="bg-slate-900/95 border border-slate-800/80 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5"
+        class="dialog-panel bg-slate-900/95 border border-slate-800/80 w-full max-w-md rounded-2xl p-6 shadow-sm space-y-5"
     >
         {#if !isEditing}
             <!-- ================= VIEW MODE ================= -->
@@ -208,7 +206,7 @@
                 <button
                     type="button"
                     onclick={() => (calState.selectedEvent = null)}
-                    class="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
+                    aria-label="Close dialog" class="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
                 >
                     <X class="w-5 h-5" />
                 </button>
@@ -298,7 +296,7 @@
                     type="button"
                     onclick={handleUpdateEvent}
                     disabled={editLoading}
-                    class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
+                    class="px-4 py-2 rounded-xl action-primary text-white font-bold text-xs shadow-sm  transition disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
                 >
                     <Save class="w-3.5 h-3.5" />
                     <span>{editLoading ? "Updating..." : "Save Changes"}</span>
@@ -306,4 +304,4 @@
             </div>
         {/if}
     </div>
-</div>
+</Modal>

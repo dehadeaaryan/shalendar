@@ -86,7 +86,7 @@
 </script>
 
 <div
-    class="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-800/80 p-4 sm:p-6 space-y-4 shadow-xl"
+    class="calendar-surface bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 sm:p-6 space-y-4 shadow-sm"
 >
     <div
         class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-4 gap-4"
@@ -106,14 +106,14 @@
         </div>
 
         <div
-            class="flex items-center space-x-2 bg-slate-950/50 p-1.5 rounded-xl border border-slate-800 shadow-inner"
+            class="flex items-center space-x-2 bg-slate-950/50 p-1.5 rounded-xl border border-slate-800 shadow-sm"
         >
             <span
                 class="text-slate-400 text-xs font-medium pl-1 hidden sm:inline"
                 >Between</span
             >
             <select
-                bind:value={startHour}
+                aria-label="Free time start hour" bind:value={startHour}
                 class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-semibold text-white focus:border-emerald-500 focus:outline-none cursor-pointer transition"
             >
                 {#each Array.from({ length: 24 }, (_, i) => i) as hr}
@@ -122,7 +122,7 @@
             </select>
             <span class="text-slate-400 text-xs font-medium">and</span>
             <select
-                bind:value={endHour}
+                aria-label="Free time end hour" bind:value={endHour}
                 class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-semibold text-white focus:border-emerald-500 focus:outline-none cursor-pointer transition"
             >
                 {#each Array.from({ length: 24 }, (_, i) => i) as hr}
@@ -147,7 +147,7 @@
     {:else}
         <!-- Removed overflow-x-auto so it perfectly fits the screen width -->
         <div
-            class="border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-inner mt-2"
+            class="border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-sm mt-2"
         >
             <!-- Changed from min-w-[600px] to w-full so it takes exactly 1 column width -->
             <div

@@ -37,10 +37,10 @@
 </script>
 
 <div
-    class="max-w-md mx-auto my-12 sm:my-20 bg-slate-900/60 backdrop-blur-2xl rounded-3xl p-8 border border-slate-800/80 text-center shadow-2xl space-y-6"
+    class="max-w-md mx-auto my-12 sm:my-20 bg-slate-900/60 backdrop-blur-2xl rounded-3xl p-8 border border-slate-800/80 text-center shadow-sm space-y-6"
 >
     <div
-        class="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto text-orange-400 shadow-inner"
+        class="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto text-orange-400 shadow-sm"
     >
         <Lock class="w-8 h-8" />
     </div>
@@ -74,6 +74,7 @@
 
         <div class="relative">
             <input
+                aria-label="Calendar password" autocomplete="current-password"
                 type={showLockPassword ? "text" : "password"}
                 bind:value={passwordInput}
                 placeholder="Enter calendar password"
@@ -97,7 +98,7 @@
         <button
             type="submit"
             disabled={authLoading}
-            class="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-sm shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+            class="w-full py-3.5 rounded-xl action-primary text-white font-bold text-sm shadow-sm  active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
         >
             {authLoading ? "Verifying..." : "Unlock Calendar"}
         </button>

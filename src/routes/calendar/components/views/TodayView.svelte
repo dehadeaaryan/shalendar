@@ -5,7 +5,7 @@
 </script>
 
 <div
-    class="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-800/80 p-4 space-y-4 shadow-xl"
+    class="calendar-surface bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 space-y-4 shadow-sm"
 >
     <div
         class="flex items-center justify-between border-b border-slate-800/80 pb-3"
@@ -18,10 +18,10 @@
             </div>
             <div>
                 <h3 class="text-base font-bold text-white">
-                    Daily Schedule Grid
+                    Your day at a glance
                 </h3>
                 <p class="text-xs text-slate-400 font-medium">
-                    Click any event to edit title or start/end times
+                    Select an event to see the details.
                 </p>
             </div>
         </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import Modal from "$lib/components/Modal.svelte";
     import { calState } from "../../state.svelte";
     import { COMMON_TIMEZONES } from "../../utils";
     import { invalidateAll } from "$app/navigation";
@@ -143,12 +144,9 @@
         }
     }
 </script>
-
-<div
-    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity"
->
+<Modal label="Calendar settings" onClose={() => { calState.showSettingsModal = false; }} wide>
     <div
-        class="bg-slate-900 border border-slate-800/80 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl shadow-2xl shadow-black/50"
+        class="dialog-panel bg-slate-900 border border-slate-800/80 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl shadow-sm shadow-black/50"
     >
         <!-- Header -->
         <div
@@ -294,7 +292,7 @@
                             type="button"
                             onclick={handleSaveSettings}
                             disabled={settingsLoading}
-                            class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-sm shadow-md shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer flex items-center space-x-2"
+                            class="px-6 py-2.5 rounded-xl action-primary text-white font-bold text-sm shadow-sm  active:scale-95 transition-all disabled:opacity-50 cursor-pointer flex items-center space-x-2"
                         >
                             {#if settingsLoading}
                                 <span
@@ -470,7 +468,7 @@
                         <button
                             type="button"
                             onclick={handleDeleteCalendar}
-                            class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-lg shadow-red-600/20 transition cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap"
+                            class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm shadow-red-600/20 transition cursor-pointer flex items-center justify-center space-x-1.5 whitespace-nowrap"
                         >
                             <Trash2 class="w-4 h-4" />
                             <span>Delete Calendar</span>
@@ -480,4 +478,4 @@
             {/if}
         </div>
     </div>
-</div>
+</Modal>

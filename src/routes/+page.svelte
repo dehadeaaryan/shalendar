@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+ import Brand from '$lib/components/Brand.svelte';
+ import CalendarPreview from '$lib/components/CalendarPreview.svelte';
 	import { goto } from '$app/navigation';
 	import {
 		Calendar as CalendarIcon,
-		ShieldCheck,
-		Zap,
-		Sparkles,
 		ArrowRight,
 		Lock,
 		PlusCircle,
@@ -16,7 +15,6 @@
 		Trash2,
 		Users,
 		Clock,
-		ExternalLink,
 		Smartphone
 	} from 'lucide-svelte';
 
@@ -166,123 +164,51 @@
 		}
 	}
 </script>
-
-<!-- Top Navbar -->
-<header class="border-b border-slate-800/80 bg-[#090d16]/80 backdrop-blur-md sticky top-0 z-50">
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-		<div class="flex items-center space-x-3">
-			<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-				<CalendarIcon class="w-5 h-5 text-white" />
-			</div>
-			<div class="flex items-center space-x-1.5">
-				<span class="text-xl font-bold tracking-tight text-white">Shalendar</span>
-			</div>
-		</div>
-		<div class="hidden sm:flex items-center space-x-3">
-			<a
-				href="/help"
-				class="text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 transition flex items-center space-x-1.5"
-			>
-				<Smartphone class="w-3.5 h-3.5" />
-				<span>Setup Guide</span>
-			</a>
-			<button
-				type="button"
-				onclick={() => { activeTab = 'open'; document.getElementById('auth-form')?.scrollIntoView({ behavior: 'smooth' }); }}
-				class="text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5 transition"
-			>
-				Open Calendar
-			</button>
-			<button
-				type="button"
-				onclick={() => { activeTab = 'create'; document.getElementById('auth-form')?.scrollIntoView({ behavior: 'smooth' }); }}
-				class="text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-4 py-2 rounded-lg transition shadow-md shadow-orange-500/20"
-			>
-				Create Calendar
-			</button>
-		</div>
-	</div>
+<header class="site-header">
+ <div class="site-header-inner"><Brand /><nav aria-label="Main navigation"><a class="quiet-link" href="/help">Setup guide</a><button class="button-secondary" onclick={() => { activeTab = 'open'; document.getElementById('auth-form')?.scrollIntoView({ behavior: 'smooth' }); }}>Open calendar <ArrowRight size={15} /></button></nav></div>
 </header>
-
-<!-- Main Landing Container -->
-<main class="flex-grow">
-	<!-- Saved Calendars Quick Switcher Banner -->
-	{#if savedCalendars.length > 0}
-		<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-			<div class="p-4 rounded-2xl glass-card border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-				<div class="flex items-center space-x-2 text-slate-300 text-xs font-semibold uppercase tracking-wider">
-					<Users class="w-4 h-4 text-orange-400" />
-					<span>Your Saved Calendars:</span>
-				</div>
-				<div class="flex flex-wrap items-center gap-2">
-					{#each savedCalendars as calName}
-						<a
-							href={`/calendar/${calName}`}
-							class="px-3 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-xs font-medium text-slate-200 border border-slate-700 flex items-center space-x-1.5 transition"
-						>
-							<span class="capitalize">{calName}</span>
-							<ExternalLink class="w-3 h-3 text-slate-400" />
-						</a>
-					{/each}
-				</div>
-			</div>
-		</section>
-	{/if}
-
-	<!-- Hero Section -->
-	<section class="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-		<!-- Background Glow Accents -->
-		<div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-		<div class="absolute top-1/3 right-1/4 w-80 h-80 bg-amber-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-		<div class="text-center max-w-3xl mx-auto">
-			<div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-medium text-orange-400 mb-6 backdrop-blur-sm">
-				<Sparkles class="w-3.5 h-3.5 text-orange-400" />
-				<span>Multi-Person Timezone & iOS Shortcuts REST Sync</span>
-			</div>
-			
-			<h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
-				Multiple schedules. One unified <span class="text-gradient">shared view</span>.
-			</h1>
-			
-			<p class="text-lg sm:text-xl text-slate-400 mb-10 leading-relaxed">
-				Shalendar lets long-distance partners, couples, roommates, and small teams overlay individual schedules side-by-side. Support for timezones, color-coded members, and iOS Shortcuts sync.
-			</p>
-		</div>
-
-		<!-- Interactive Form Card -->
-		<div id="auth-form" class="max-w-xl mx-auto glass-panel rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-800 relative z-10">
+<main class="landing-main">
+ <section class="landing-hero">
+  <div class="hero-story">
+   <span class="eyebrow"><span class="status-dot"></span>Different schedules. More together.</span>
+   <h1>Make room<br />for <em>each other.</em></h1>
+   <p class="hero-description">Your plans, their plans, and the moments in between. Bring everyone's calendar into one calm, shared space.</p>
+   <div class="hero-details"><span><Users size={15} />Made for sharing</span><span><Clock size={15} />Across timezones</span></div>
+   <CalendarPreview />
+  </div>
+  <div class="auth-panel" id="auth-form">
+   <div class="auth-heading"><span class="eyebrow">Your shared space</span><h2>{activeTab === 'create' ? 'Good plans start here.' : 'Welcome back.'}</h2><p>{activeTab === 'create' ? 'A name, your people, and a little time together.' : 'Pick up where you left off.'}</p></div>
 			<!-- Form Tabs -->
-			<div class="flex p-1 bg-slate-900/80 rounded-xl mb-6 border border-slate-800 text-xs sm:text-sm">
+			<div class="auth-tabs">
 				<button
 					type="button"
-					onclick={() => activeTab = 'create'}
+					aria-pressed={activeTab === 'create'} onclick={() => activeTab = 'create'}
 					class={`flex-1 py-2.5 px-2.5 rounded-lg font-semibold transition flex items-center justify-center space-x-2 ${
 						activeTab === 'create'
-							? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md'
+							? 'tab-selected'
 							: 'text-slate-400 hover:text-white'
 					}`}
 				>
 					<PlusCircle class="w-4 h-4 shrink-0" />
-					<span>Create<span class="hidden sm:inline"> Shared</span> Calendar</span>
+					<span>Create calendar</span>
 				</button>
 				<button
 					type="button"
-					onclick={() => activeTab = 'open'}
+					aria-pressed={activeTab === 'open'} onclick={() => activeTab = 'open'}
 					class={`flex-1 py-2.5 px-2.5 rounded-lg font-semibold transition flex items-center justify-center space-x-2 ${
 						activeTab === 'open'
-							? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
+							? 'tab-selected'
 							: 'text-slate-400 hover:text-white'
 					}`}
 				>
 					<LogIn class="w-4 h-4 shrink-0" />
-					<span>Open Calendar</span>
+					<span>Open calendar</span>
 				</button>
 			</div>
 
 			<!-- Tab 1: Create Calendar -->
 			{#if activeTab === 'create'}
-				<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="space-y-4">
+				<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="auth-fields space-y-5">
 					{#if createError}
 						<div class="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
 							{createError}
@@ -309,7 +235,7 @@
 						<label for="create-password-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Shared Password</label>
 						<div class="relative">
 							<input
-								id="create-password-input"
+								id="create-password-input" autocomplete="new-password"
 								type={showCreatePassword ? 'text' : 'password'}
 								bind:value={createPassword}
 								placeholder="Choose a shared password"
@@ -342,7 +268,7 @@
 							</button>
 						</div>
 
-						<div class="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+						<div class="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
 							{#each members as member, idx}
 								<div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2 relative">
 									<div class="flex items-center justify-between">
@@ -362,11 +288,11 @@
 									<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 										<input
 											type="text"
-											bind:value={member.name}
+											aria-label={`Person ${idx + 1} name`} bind:value={member.name}
 											placeholder="Name"
 											class="px-3 py-1.5 rounded-lg glass-input text-xs"
 										/>
-										<select bind:value={member.timezone} class="px-2.5 py-1.5 rounded-lg glass-input text-xs bg-slate-900">
+										<select aria-label={`Person ${idx + 1} timezone`} bind:value={member.timezone} class="px-2.5 py-1.5 rounded-lg glass-input text-xs bg-slate-900">
 											{#each COMMON_TIMEZONES as tz}
 												<option value={tz}>{tz}</option>
 											{/each}
@@ -374,7 +300,7 @@
 									</div>
 
 									<div class="flex items-center space-x-2 pt-1">
-										<input type="color" bind:value={member.displayColor} class="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
+										<input type="color" aria-label={`Person ${idx + 1} color`} bind:value={member.displayColor} class="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
 										<span class="text-[11px] text-slate-400 font-mono">{member.displayColor}</span>
 									</div>
 								</div>
@@ -385,7 +311,7 @@
 					<button
 						type="submit"
 						disabled={createLoading}
-						class="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold shadow-lg shadow-orange-500/25 flex items-center justify-center space-x-2 transition disabled:opacity-50"
+						class="w-full py-3.5 rounded-xl action-primary text-white font-semibold shadow-sm  flex items-center justify-center space-x-2 transition disabled:opacity-50"
 					>
 						{#if createLoading}
 							<span>Creating Calendar...</span>
@@ -398,7 +324,7 @@
 
 			<!-- Tab 2: Open Calendar -->
 			{:else}
-				<form onsubmit={(e) => { e.preventDefault(); handleOpen(); }} class="space-y-4">
+				<form onsubmit={(e) => { e.preventDefault(); handleOpen(); }} class="auth-fields space-y-5">
 					{#if openError}
 						<div class="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
 							{openError}
@@ -424,7 +350,7 @@
 						<label for="open-password-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
 						<div class="relative">
 							<input
-								id="open-password-input"
+								id="open-password-input" autocomplete="current-password"
 								type={showOpenPassword ? 'text' : 'password'}
 								bind:value={openPassword}
 								placeholder="Enter calendar password"
@@ -446,7 +372,7 @@
 					<button
 						type="submit"
 						disabled={openLoading}
-						class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg shadow-blue-500/25 flex items-center justify-center space-x-2 transition disabled:opacity-50"
+						class="w-full py-3.5 rounded-xl action-primary text-white font-semibold shadow-sm  flex items-center justify-center space-x-2 transition disabled:opacity-50"
 					>
 						{#if openLoading}
 							<span>Opening Calendar...</span>
@@ -457,69 +383,19 @@
 					</button>
 				</form>
 			{/if}
-		</div>
-	</section>
-
-	<!-- Feature Grid Section -->
-	<section class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
-		<div class="text-center mb-12">
-			<h2 class="text-2xl sm:text-3xl font-bold text-white mb-3">Built for multi-person & long distance sharing</h2>
-			<p class="text-slate-400 max-w-xl mx-auto text-sm sm:text-base">Overlay unshared personal schedules side-by-side and keep shared events in sync.</p>
-		</div>
-
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-			<!-- Feature 1 -->
-			<div class="glass-card rounded-2xl p-6 border border-slate-800">
-				<div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 text-orange-400">
-					<Clock class="w-6 h-6" />
-				</div>
-				<h3 class="text-lg font-bold text-white mb-2">Timezone Conversion</h3>
-				<p class="text-slate-400 text-sm leading-relaxed">
-					Each person has their own timezone. Schedules automatically convert so an event at 10 AM EST shows up as 7 AM PDT.
-				</p>
-			</div>
-
-			<!-- Feature 2 -->
-			<div class="glass-card rounded-2xl p-6 border border-slate-800">
-				<div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
-					<Users class="w-6 h-6" />
-				</div>
-				<h3 class="text-lg font-bold text-white mb-2">Hourly Calendar Grids</h3>
-				<p class="text-slate-400 text-sm leading-relaxed">
-					Compare individual daily & weekly schedules side-by-side on an hourly time grid (6 AM – 11 PM).
-				</p>
-			</div>
-
-			<!-- Feature 3 -->
-			<div class="glass-card rounded-2xl p-6 border border-slate-800">
-				<div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 text-blue-400">
-					<Zap class="w-6 h-6" />
-				</div>
-				<h3 class="text-lg font-bold text-white mb-2">iOS Shortcuts REST Sync</h3>
-				<p class="text-slate-400 text-sm leading-relaxed mb-4">
-					Sync Apple Calendar events automatically via a single `/api/sync` POST request right from your iPhone.
-				</p>
-				<a
-					href="/help"
-					class="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition"
-				>
-					<Smartphone class="w-3.5 h-3.5" />
-					<span>View Setup Guide →</span>
-				</a>
-			</div>
-		</div>
-	</section>
+   <p class="form-footnote"><Lock size={12} />One shared password for your people.</p>
+  </div>
+ </section>
+ {#if savedCalendars.length > 0}
+ <section class="saved-calendars" aria-label="Saved calendars"><span class="eyebrow">Pick up where you left off</span><div>{#each savedCalendars as name}<a href={`/calendar/${encodeURIComponent(name)}`}><CalendarIcon size={16} /><span>{name}</span><ArrowRight size={14} /></a>{/each}</div></section>
+ {/if}
+ <section class="features-section">
+  <div class="features-heading"><span class="eyebrow">Less coordinating, more connecting</span><h2>Life happens.<br />Stay in the loop.</h2><p>A few thoughtful details to make planning together feel easy.</p></div>
+  <div class="feature-list">
+   <article><span class="feature-number">01</span><div><h3>Different timezones. Same page.</h3><p>See every plan in your timezone, or switch to someone else's perspective with a tap.</p></div><Clock size={22} /></article>
+   <article><span class="feature-number">02</span><div><h3>Find your next free moment.</h3><p>Compare schedules side by side and find the time when everyone's available.</p></div><Users size={22} /></article>
+   <article><span class="feature-number">03</span><div><h3>Your iPhone, in the loop.</h3><p>Bring Apple Calendar events along with iOS Shortcuts.</p><a href="/help">Set up calendar sync <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
+  </div>
+ </section>
 </main>
-
-<!-- Footer -->
-<footer class="border-t border-slate-800/80 py-8 text-center text-xs text-slate-500">
-	<div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-		<div class="flex items-center space-x-2">
-			<span class="font-semibold text-slate-400">Shalendar</span>
-			<span>— Shared Calendar Web App</span>
-		</div>
-		<div>
-			Hosted at <span class="font-mono text-orange-400">shalendar.aaryandehade.com</span>
-		</div>
-	</div>
-</footer>
+<footer class="site-footer"><Brand /><span>A little more time, together.</span><a href="/help">Help & setup <ArrowRight size={14} /></a></footer>

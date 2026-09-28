@@ -137,7 +137,8 @@ export function getDaysInMonthGrid(year: number, month: number) {
     for (let day = 1; day <= lastDay.getDate(); day++) {
         days.push({ date: new Date(year, month, day), isCurrentMonth: true });
     }
-    for (let i = 1; i <= 42 - days.length; i++) {
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
         days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
     }
     return days;

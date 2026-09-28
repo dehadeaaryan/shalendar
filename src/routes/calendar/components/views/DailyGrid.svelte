@@ -29,10 +29,10 @@
 </script>
 
 <div
-    class="overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-inner"
+    class="daily-grid overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-sm"
 >
     <div
-        class="min-w-[320px] sm:min-w-[700px] grid grid-cols-[44px_1fr] sm:grid-cols-[60px_1fr] relative"
+        class="min-w-[320px] grid grid-cols-[44px_1fr] sm:grid-cols-[60px_1fr] relative"
     >
         <div
             class="border-r border-slate-800/80 bg-slate-900/60 divide-y divide-slate-800/60"
@@ -69,7 +69,7 @@
             style="grid-template-columns: repeat({Math.max(
                 1,
                 calState.partners.length,
-            )}, minmax(0, 1fr))"
+            )}, minmax(140px, 1fr))"
         >
             {#each calState.partners as member}
                 <div class="flex flex-col relative overflow-hidden">
@@ -123,7 +123,7 @@
                             <button
                                 type="button"
                                 onclick={() => (calState.selectedEvent = evt)}
-                                class="absolute p-2 rounded-xl text-xs font-medium overflow-hidden shadow-md flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
+                                class="schedule-event absolute p-2 rounded-xl text-xs font-medium overflow-hidden shadow-sm flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
                                 style="top: {getEventTopPx(
                                     evt.startTime,
                                     activeTimezone,
@@ -140,7 +140,7 @@
                                     >{evt.title}</span
                                 >
                                 <span
-                                    class="text-[9px] text-slate-300 font-mono truncate opacity-90 w-full mt-1"
+                                    class="event-time text-[11px] text-slate-300 font-mono truncate opacity-90 w-full mt-1"
                                 >
                                     {formatInTimezone(
                                         evt.startTime,

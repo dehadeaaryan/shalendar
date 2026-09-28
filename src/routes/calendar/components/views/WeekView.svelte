@@ -50,7 +50,7 @@
 </script>
 
 <div
-    class="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-800/80 p-4 space-y-5 shadow-xl"
+    class="calendar-surface bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 space-y-5 shadow-sm"
 >
     <div
         class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-3 gap-3"
@@ -62,9 +62,9 @@
                 <Columns4 class="w-5 h-5" />
             </div>
             <div>
-                <h3 class="text-base font-bold text-white">This Week</h3>
+                <h3 class="text-base font-bold text-white">The week ahead</h3>
                 <p class="text-xs text-slate-400 font-medium">
-                    Click any event to edit title or start/end times
+                    Select an event to see the details.
                 </p>
             </div>
         </div>
@@ -97,7 +97,7 @@
             {@const dayEvents = getEventsForDay(day)}
             {@const isCollapsed = isDayCollapsed(day, dayEvents.length)}
             <div
-                class={`rounded-2xl border transition-all ${isSameDay(day, new Date()) ? "border-orange-500/50 bg-slate-900/80 shadow-md shadow-orange-500/5" : "border-slate-800/80 bg-slate-950/40"}`}
+                class={`rounded-2xl border transition-all ${isSameDay(day, new Date()) ? "border-orange-500/50 bg-slate-900/80 shadow-sm " : "border-slate-800/80 bg-slate-950/40"}`}
             >
                 <button
                     onclick={() => toggleDayCollapse(day, dayEvents.length)}

@@ -55,7 +55,7 @@
 </script>
 
 <div
-    class="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-800/80 p-4 sm:p-6 space-y-4 shadow-xl"
+    class="calendar-surface bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 sm:p-6 space-y-4 shadow-sm"
 >
     <h3
         class="text-base sm:text-lg font-bold text-white flex items-center space-x-2"
@@ -65,7 +65,7 @@
         >
             <List class="w-5 h-5" />
         </div>
-        <span>Upcoming Agenda</span>
+        <span>Coming up</span>
     </h3>
 
     <!-- Check against our new filtered array instead of calState.events -->
@@ -79,7 +79,7 @@
             <!-- Iterate over the filtered array -->
             {#each upcomingEvents as evt}
                 <div
-                    class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 transition-all gap-3 shadow-sm"
+                    class="agenda-event flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 transition-all gap-3 shadow-sm"
                 >
                     <button
                         type="button"
@@ -93,6 +93,7 @@
                             )}"
                         ></div>
                         <div class="min-w-0 flex-1">
+                            <p class="agenda-date">{new Date(evt.startTime).toLocaleDateString([], { timeZone: activeTimezone, weekday: 'short', month: 'short', day: 'numeric' })}</p>
                             <h4
                                 class="text-xs sm:text-sm font-bold text-white truncate"
                             >

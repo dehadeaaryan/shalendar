@@ -1,4 +1,5 @@
 <script lang="ts">
+ import Brand from "$lib/components/Brand.svelte";
 	import { page } from "$app/stores";
 	import { onMount } from "svelte";
 	import {
@@ -284,45 +285,13 @@
 	/>
 </svelte:head>
 
-<!-- Top Navbar -->
-<header
-	class="border-b border-slate-800/80 bg-[#090d16]/80 backdrop-blur-md sticky top-0 z-50"
->
-	<div
-		class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
-	>
-		<div class="flex items-center space-x-3">
-			<a href="/" class="flex items-center space-x-3">
-				<div
-					class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20"
-				>
-					<CalendarIcon class="w-5 h-5 text-white" />
-				</div>
-				<span class="text-xl font-bold tracking-tight text-white"
-					>Shalendar</span
-				>
-			</a>
-			<ChevronRight class="w-4 h-4 text-slate-600" />
-			<span class="text-sm font-medium text-slate-400">Setup Guide</span>
-		</div>
-		<a
-			href={returnUrl}
-			class="flex text-sm font-semibold text-orange-400 hover:text-orange-300 px-3.5 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 transition items-center space-x-2 active:scale-95"
-		>
-			<ArrowRight class="w-4 h-4 rotate-180" />
-			<span>{returnLabel}</span>
-		</a>
-	</div>
-</header>
-
-<main class="min-h-screen bg-[#080c14] text-slate-100">
+<header class="site-header"><div class="site-header-inner"><Brand /><nav aria-label="Guide navigation"><a class="button-secondary" href={returnUrl}><ArrowRight size={15} class="rotate-180" />{returnLabel}</a></nav></div></header>
+<main class="help-page min-h-screen bg-[var(--canvas)] text-slate-100">
 	<!-- Hero -->
 	<section
 		class="relative pt-14 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto overflow-hidden"
 	>
-		<div
-			class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-orange-500/10 blur-[100px] rounded-full pointer-events-none"
-		></div>
+
 
 		<div class="relative text-center">
 			<div
@@ -773,11 +742,11 @@
 	<!-- Bottom CTA -->
 	<section class="py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
 		<div
-			class="rounded-3xl p-8 text-center border border-slate-800 bg-slate-900/80 relative overflow-hidden shadow-2xl"
+			class="rounded-3xl p-8 text-center border border-slate-800 bg-slate-900/80 relative overflow-hidden shadow-sm"
 		>
 			<div class="relative">
 				<div
-					class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/20"
+					class="w-12 h-12 rounded-2xl action-primary flex items-center justify-center mx-auto mb-4 shadow-sm "
 				>
 					<Zap class="w-6 h-6 text-white" />
 				</div>
@@ -792,7 +761,7 @@
 				<div class="flex flex-col sm:flex-row gap-3 justify-center">
 					<a
 						href={returnUrl}
-						class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs shadow-lg shadow-orange-500/20 transition cursor-pointer"
+						class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl action-primary text-white font-bold text-xs shadow-sm  transition cursor-pointer"
 					>
 						<CalendarIcon class="w-4 h-4" />
 						<span>{returnLabel}</span>
@@ -804,7 +773,7 @@
 </main>
 
 <footer
-	class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 bg-[#080c14]"
+	class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 bg-[var(--canvas)]"
 >
 	<div
 		class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3"

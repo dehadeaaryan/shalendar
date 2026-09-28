@@ -23,16 +23,20 @@
 </script>
 
 <div
-	class="min-h-screen flex flex-col bg-[#080c14] text-slate-100 antialiased selection:bg-orange-500/30 selection:text-orange-200"
+	class="calendar-app"
 >
 	<Header />
 
-	<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+	<main class="calendar-main">
 		{#if !calState.isAuthenticated}
 			<AuthGuard />
 		{:else}
 			<div class="space-y-6">
 				<Toolbar />
+ <div class="member-legend" aria-label="Calendar members">
+  <span class="eyebrow">Your people</span>
+  {#each calState.partners as member}<span class="member-chip"><i style="background: {member.displayColor}"></i>{member.name}<span class="member-timezone">{member.timezone.split('/').pop()?.replaceAll('_', ' ')}</span></span>{/each}
+ </div>
 
 				{#if calState.viewMode === "today"}
 					<TodayView />
