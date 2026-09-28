@@ -24,6 +24,14 @@
 	let copiedKey = $state<string | null>(null);
 	let returnUrl = $state<string>("/");
 	let returnLabel = $state<string>("Back to App");
+	type GuideTab = "ios" | "api" | "schema" | "curl";
+	let activeTab = $state<GuideTab>("ios");
+	const guideTabs: { id: GuideTab; label: string; icon: typeof Smartphone }[] = [
+		{ id: "ios", label: "iOS Shortcut Setup", icon: Smartphone },
+		{ id: "api", label: "API Reference", icon: Globe },
+		{ id: "schema", label: "Payload Schema", icon: BookOpen },
+		{ id: "curl", label: "cURL Test", icon: Terminal },
+	];
 
 	onMount(() => {
 		// Detect origin or query param to dynamically set return link
@@ -60,7 +68,7 @@
 	const syncPayloadExample = `{
   "calendar_name": "shalendar-demo",
   "password": "your-shared-password",
-  "partner_name": "demo-name", // Use exact member name OR "BOTH" for joint events
+  "partner_name": "demo-name",
   "timezone": "America/Los_Angeles",
   "sync_start": "2026-09-14T00:00:00-07:00",
   "sync_end": "2026-09-21T23:59:59-07:00",
@@ -78,28 +86,6 @@
       "external_shortcut_id": "apple-cal-uuid-def456"
     }
   ]
-}`;
-
-	const responseExample = `{
-  "success": true,
-  "partners": [
-    {
-      "id": "partner-uuid-1",
-      "name": "Aaru",
-      "displayColor": "#3b82f6",
-      "timezone": "America/Los_Angeles"
-    }
-  ],
-  "range": {
-    "start": "2026-09-14T07:00:00.000Z",
-    "end": "2026-09-22T06:59:59.000Z"
-  },
-  "stats": {
-    "created": 2,
-    "updated": 0,
-    "deleted": 0,
-    "totalInPayload": 2
-  }
 }`;
 
 	const curlExample = `curl -X POST https://shalendar.aaryandehade.com/api/sync \\
@@ -143,35 +129,35 @@
 		{
 			field: "partner_name",
 			type: "string",
-			required: true,
+			required: false,
 			description:
-				'Member display name (e.g. "Aaru"). Pass "BOTH" to sync events to all members at once.',
+				'Member display name (e.g. "Aaru"). Defaults to "Person 1"; an unknown name creates a member. Use "BOTH" to sync to all existing members.',
 		},
 		{
 			field: "timezone",
 			type: "string",
-			required: true,
+			required: false,
 			description:
-				"IANA timezone string (e.g. America/Los_Angeles, Europe/London).",
+				"Timezone for a newly created member (e.g. America/Los_Angeles). Defaults to UTC; event timestamps still need an offset or Z.",
 		},
 		{
 			field: "events",
 			type: "array",
-			required: true,
-			description: "Array of event objects to sync.",
+			required: false,
+			description: "Array of event objects. Defaults to an empty array; an empty array changes nothing unless a sync window is supplied.",
 		},
 		{
 			field: "sync_start",
 			type: "ISO 8601",
 			required: false,
 			description:
-				"Start of sync window. Unlisted events inside window are removed. Defaults to min start time.",
+				"Start of sync window. With sync_end, missing events fully inside the window are removed. Defaults to the earliest supplied event start when events are present.",
 		},
 		{
 			field: "sync_end",
 			type: "ISO 8601",
 			required: false,
-			description: "End of sync window. Defaults to max end time.",
+			description: "End of sync window. Defaults to the latest supplied event end when events are present.",
 		},
 	];
 
@@ -179,91 +165,82 @@
 		{
 			field: "title",
 			type: "string",
-			required: true,
-			description: "Event title (supports text and emojis).",
+			required: false,
+			description: "Event title (supports text and emojis). Defaults to Untitled Event.",
 		},
 		{
 			field: "start_time",
 			type: "ISO 8601",
 			required: true,
 			description:
-				"Start time with local timezone offset (e.g. 2026-09-14T08:00:00-07:00).",
+				"ISO 8601 start time with an offset or Z (e.g. 2026-09-14T08:00:00-07:00).",
 		},
 		{
 			field: "end_time",
 			type: "ISO 8601",
 			required: true,
-			description: "End time with local timezone offset.",
+			description: "ISO 8601 end time with an offset or Z.",
 		},
 		{
 			field: "external_shortcut_id",
 			type: "string",
-			required: true,
+			required: false,
 			description:
-				"Unique Apple Calendar Item Identifier (used for idempotent upsert and delete operations).",
+				"Stable unique ID for this event. Strongly recommended: without one, repeated syncs can create duplicates.",
 		},
 	];
 
 	const steps = [
 		{
 			num: 1,
-			title: "Create Your Shortcut",
+			title: "Set up your calendar and Shortcut",
 			icon: Smartphone,
 			color: "orange",
-			content: `Open the <strong>Shortcuts</strong> app on your iPhone. Tap the <strong>+</strong> button in the top right to create a new shortcut. Name it <strong>"Sync Shalendar"</strong>.`,
+			content: `Create a calendar in Shalendar first. On your iPhone, create a Shortcut named <strong>Sync Shalendar</strong>. Add three <strong>Text</strong> actions for the calendar name, shared password, and your exact member name; save each with <strong>Set Variable</strong>. If editing a shared Shortcut, replace any example credentials in both Text actions and request body fields. Keep the password private when sharing or exporting a Shortcut.`,
 		},
 		{
 			num: 2,
 			title: "Find Calendar Events",
 			icon: CalendarIcon,
 			color: "amber",
-			content: `Add the <strong>"Find Calendar Events"</strong> action. Configure filters:
-            <br><br>• <strong>Calendar:</strong> Select your primary Apple Calendar
-            <br>• <strong>Start Date:</strong> Set to <em>"is in the next 7 days"</em> (or preferred range)`,
+			content: `Add <strong>Find Calendar Events</strong> and filter <strong>Start Date</strong> to the next 7 days. Add a Calendar filter if you only want to sync one Apple Calendar.`,
 		},
 		{
 			num: 3,
 			title: "Loop Events & Extract Details",
 			icon: RefreshCw,
 			color: "blue",
-			content: `Add a <strong>"Repeat with Each"</strong> action. Inside the loop, add a <strong>"Get Details of Calendar Events"</strong> action to extract:
-            <br><br>• <strong>Title</strong>
-            <br>• <strong>Start Date</strong>
-            <br>• <strong>End Date</strong>
-            <br>• <strong>Calendar Item Identifier</strong> (Required for deduplication)`,
+			content: `Add <strong>Repeat with Each</strong> for the found events. Inside the loop, get each event's <strong>Title</strong>, <strong>Start Date</strong>, and <strong>End Date</strong>. Format both dates as <strong>ISO 8601</strong> with time. Also get a stable unique event identifier for <code>external_shortcut_id</code>. Using the event's <strong>Name</strong> or title as the ID can merge distinct events with the same name.`,
 		},
 		{
 			num: 4,
 			title: "Format Items into JSON Dictionaries",
 			icon: Code2,
 			color: "violet",
-			content: `Inside the loop, add a <strong>"Dictionary"</strong> action with these keys:
+			content: `Inside the loop, add a <strong>Dictionary</strong> with these keys:
             <br><br>• <code>title</code> → Title
             <br>• <code>start_time</code> → Start Date (Formatted as ISO 8601)
             <br>• <code>end_time</code> → End Date (Formatted as ISO 8601)
-            <br>• <code>external_shortcut_id</code> → Calendar Item Identifier
-            <br><br>Pass each dictionary into an <strong>"Add to Variable"</strong> action named <code>eventsList</code>.`,
+            <br>• <code>external_shortcut_id</code> → stable unique event ID
+            <br><br>Add each dictionary to an <strong>EventList</strong> variable. Pass that list as the <code>events</code> array, including when it contains just one event.`,
 		},
 		{
 			num: 5,
 			title: "Send POST Request to /api/sync",
 			icon: Globe,
 			color: "emerald",
-			content: `Outside the loop, add <strong>"Get Contents of URL"</strong>:
+			content: `After the loop, add <strong>Get Contents of URL</strong>:
             <br><br>• <strong>URL:</strong> <code>https://shalendar.aaryandehade.com/api/sync</code>
             <br>• <strong>Method:</strong> POST
             <br>• <strong>Header:</strong> <code>Content-Type: application/json</code>
-            <br>• <strong>Request Body:</strong> JSON containing <code>calendar_name</code>, <code>password</code>, <code>partner_name</code>, <code>timezone</code>, and <code>events</code> (set to variable <code>eventsList</code>)`,
+            <br>• <strong>Request Body:</strong> JSON containing <code>calendar_name</code>, <code>password</code>, <code>partner_name</code>, <code>timezone</code>, and <code>events</code> (the EventList variable). You can use the JSON body editor, or send a Text action containing valid JSON as a File body with the same header. Run it once and check for <code>success: true</code> before adding automation.`,
 		},
 		{
 			num: 6,
 			title: "Automate Background Sync",
 			icon: Zap,
 			color: "yellow",
-			content: `Go to the <strong>Automation</strong> tab in Shortcuts:
-            <br><br>• Select <strong>"Time of Day"</strong> (e.g. 7:00 AM daily)
-            <br>• Set Action: Run <strong>"Sync Shalendar"</strong>
-            <br>• Select <strong>"Run Immediately"</strong> so it syncs seamlessly in the background without prompting!`,
+			content: `In the <strong>Automation</strong> tab, add a <strong>Time of Day</strong> personal automation, set it to run daily, and select <strong>Sync Shalendar</strong>. Choose <strong>Run Immediately</strong> if available on your iOS version, or turn off <strong>Ask Before Running</strong>.`,
 		},
 	];
 
@@ -286,7 +263,7 @@
 </svelte:head>
 
 <header class="site-header"><div class="site-header-inner"><Brand /><nav aria-label="Guide navigation"><a class="button-secondary" href={returnUrl}><ArrowRight size={15} class="rotate-180" />{returnLabel}</a></nav></div></header>
-<main class="help-page min-h-screen bg-[var(--canvas)] text-slate-100">
+<main class="help-page min-h-screen text-slate-100">
 	<!-- Hero -->
 	<section
 		class="relative pt-14 pb-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto overflow-hidden"
@@ -316,14 +293,11 @@
 			</p>
 		</div>
 
-		<!-- Quick Nav -->
-		<div class="mt-8 flex flex-wrap justify-center gap-2.5">
-			{#each [{ href: "#ios-setup", label: "📱 iOS Shortcut Setup", color: "from-orange-500/20 to-amber-500/20 border-orange-500/30 text-orange-300" }, { href: "#api-reference", label: "🔌 API Reference", color: "from-blue-500/20 to-indigo-500/20 border-blue-500/30 text-blue-300" }, { href: "#payload-schema", label: "📋 Payload Schema", color: "from-violet-500/20 to-purple-500/20 border-violet-500/30 text-violet-300" }, { href: "#test-curl", label: "💻 cURL Test", color: "from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-300" }] as item}
-				<a
-					href={item.href}
-					class={`px-3.5 py-1.5 rounded-full bg-gradient-to-r ${item.color} border text-xs font-semibold transition hover:opacity-80`}
-					>{item.label}</a
-				>
+		<div class="guide-tabs mt-8" role="group" aria-label="Guide sections">
+			{#each guideTabs as tab}
+				<button type="button" aria-pressed={activeTab === tab.id} onclick={() => activeTab = tab.id}>
+					<tab.icon size={16} /><span>{tab.label}</span>
+				</button>
 			{/each}
 		</div>
 	</section>
@@ -331,7 +305,8 @@
 	<!-- iOS Setup Steps -->
 	<section
 		id="ios-setup"
-		class="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto"
+		hidden={activeTab !== "ios"}
+		class="guide-panel py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto"
 	>
 		<div class="flex items-center space-x-3 mb-6">
 			<div
@@ -349,17 +324,12 @@
 			</div>
 		</div>
 
-		<!-- Tips banner -->
-		<div
-			class="mb-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex gap-3"
-		>
-			<Info class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-			<div class="text-xs sm:text-sm text-slate-300 space-y-1">
-				<p class="font-semibold text-amber-300">Important Sync Notes</p>
-				<ul class="space-y-1 text-slate-400 list-disc list-inside">
+		<details class="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+			<summary class="flex items-center gap-3 text-sm font-bold text-amber-300"><Info size={18} />Before you sync</summary>
+			<div class="pt-3 pl-7 text-xs sm:text-sm text-slate-300">
+				<ul class="space-y-2 text-slate-400 list-disc pl-4">
 					<li>
-						Each member runs their own Shortcut on their respective
-						iPhone.
+						Each member can run a copy of the Shortcut on their own iPhone.
 					</li>
 					<li>
 						Set <code>partner_name</code> to your exact member name,
@@ -367,43 +337,30 @@
 						all members.
 					</li>
 					<li>
-						Format dates using ISO 8601 with local timezone offsets
-						(e.g. <code>-07:00</code>) for accurate timezone
-						conversions across members.
+						Format dates as ISO 8601 with a timezone offset or <code>Z</code>.
+					</li>
+					<li>
+						A stable unique event ID is needed to update the same event on later runs. A title or Name value may repeat.
+					</li>
+					<li>
+						Without <code>sync_start</code> and <code>sync_end</code>, a run with no events will not remove previously synced events.
+					</li>
+					<li>
+						With a sync window, events absent from the payload can be deleted, including events added in Shalendar for that member. Review the window before enabling automatic runs.
 					</li>
 				</ul>
 			</div>
-		</div>
+		</details>
 
-		<div class="space-y-4">
+		<div class="space-y-3">
 			{#each steps as step}
-				<div
-					class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-xl"
-				>
-					<div class="flex gap-4">
-						<div class="flex-shrink-0">
-							<div
-								class={`w-10 h-10 rounded-xl border flex items-center justify-center ${colorMap[step.color]}`}
-							>
-								<step.icon class="w-5 h-5" />
-							</div>
-						</div>
-						<div class="flex-1 min-w-0">
-							<span
-								class="text-[11px] font-bold text-slate-500 uppercase tracking-widest"
-								>Step {step.num}</span
-							>
-							<h3 class="text-base font-bold text-white mb-1.5">
-								{step.title}
-							</h3>
-							<p
-								class="text-xs sm:text-sm text-slate-400 leading-relaxed"
-							>
-								{@html step.content}
-							</p>
-						</div>
-					</div>
-				</div>
+				<details name="setup-step" open={step.num === 1} class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-xl">
+					<summary class="flex items-center gap-3">
+						<span class={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${colorMap[step.color]}`}><step.icon size={18} /></span>
+						<span class="min-w-0"><span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Step {step.num}</span><strong class="block text-sm sm:text-base text-white">{step.title}</strong></span>
+					</summary>
+					<p class="pt-4 pl-13 text-xs sm:text-sm text-slate-400 leading-relaxed">{@html step.content}</p>
+				</details>
 			{/each}
 		</div>
 
@@ -414,11 +371,11 @@
 			<div class="flex items-center gap-2 mb-4">
 				<Terminal class="w-5 h-5 text-orange-400" />
 				<h3 class="font-bold text-white text-sm">
-					"Get Contents of URL" Configuration
+					Get Contents of URL configuration
 				</h3>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-				{#each [{ key: "URL", value: "https://shalendar.aaryandehade.com/api/sync" }, { key: "Method", value: "POST" }, { key: "Header: Content-Type", value: "application/json" }, { key: "Body Type", value: "JSON" }] as row}
+				{#each [{ key: "URL", value: "https://shalendar.aaryandehade.com/api/sync" }, { key: "Method", value: "POST" }, { key: "Header: Content-Type", value: "application/json" }, { key: "Body Type", value: "JSON, or File with JSON Text" }] as row}
 					<div
 						class="p-3 rounded-xl bg-slate-950 border border-slate-800/80"
 					>
@@ -439,8 +396,10 @@
 	<!-- API Reference -->
 	<section
 		id="api-reference"
-		class="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-slate-800/60"
+		hidden={activeTab !== "api" && activeTab !== "schema"}
+		class="guide-panel py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto"
 	>
+		<div hidden={activeTab !== "api"} class="guide-panel">
 		<div class="flex items-center space-x-3 mb-6">
 			<div
 				class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center"
@@ -467,13 +426,11 @@
 				<code class="text-sm font-mono text-white">/api/sync</code>
 			</div>
 			<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
-				Upserts events using <code>external_shortcut_id</code>. Events
-				inside the window that are missing from the payload are safely
-				pruned.
+				Within each member's sync window, matches events by <code>external_shortcut_id</code> and removes stored events absent from the payload. Supply both <code>sync_start</code> and <code>sync_end</code> to cover a full window, including a run with zero events. The basic Shortcut flow above omits those fields, so an empty run does not clear old events.
 			</p>
 
 			<div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-				{#each [{ label: "Auth", value: "calendar_name + password in JSON body", icon: Shield }, { label: "Content-Type", value: "application/json", icon: Code2 }, { label: "Rate Limit", value: "None (Self-hosted)", icon: Zap }] as meta}
+				{#each [{ label: "Auth", value: "calendar_name + password in JSON body", icon: Shield }, { label: "Content-Type", value: "application/json", icon: Code2 }, { label: "Response", value: "success and sync stats", icon: Zap }] as meta}
 					<div
 						class="p-3 rounded-xl bg-slate-950 border border-slate-800/80"
 					>
@@ -489,9 +446,13 @@
 				{/each}
 			</div>
 		</div>
+		</div>
 
 		<!-- Request Body Schema -->
-		<div id="payload-schema" class="mb-6">
+		<div id="payload-schema" hidden={activeTab !== "schema"} class="guide-panel">
+			<h2 class="text-2xl font-bold text-white mb-1">Payload Schema</h2>
+			<p class="text-sm text-slate-400 mb-7">Fields accepted by <code>/api/sync</code>.</p>
+			<div class="mb-6">
 			<h3 class="text-base font-bold text-white mb-3">
 				Request Body Fields
 			</h3>
@@ -552,9 +513,9 @@
 					</table>
 				</div>
 			</div>
-		</div>
+			</div>
 
-		<!-- Event Object Schema -->
+			<!-- Event Object Schema -->
 		<div class="mb-6">
 			<h3 class="text-base font-bold text-white mb-3">
 				Event Object Fields (inside <code class="text-orange-300"
@@ -618,13 +579,15 @@
 					</table>
 				</div>
 			</div>
+			</div>
 		</div>
 	</section>
 
 	<!-- Code Examples -->
 	<section
 		id="test-curl"
-		class="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-slate-800/60"
+		hidden={activeTab !== "curl"}
+		class="guide-panel py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto"
 	>
 		<div class="flex items-center space-x-3 mb-6">
 			<div
@@ -633,7 +596,7 @@
 				<Code2 class="w-5 h-5 text-emerald-400" />
 			</div>
 			<div>
-				<h2 class="text-2xl font-bold text-white">Code Examples</h2>
+				<h2 class="text-2xl font-bold text-white">cURL Test</h2>
 				<p class="text-xs sm:text-sm text-slate-400">
 					Copy-paste ready payload samples and cURL commands
 				</p>
@@ -702,7 +665,8 @@
 
 	<!-- FAQ -->
 	<section
-		class="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-slate-800/60"
+		hidden={activeTab !== "ios"}
+		class="guide-panel py-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto"
 	>
 		<div class="flex items-center space-x-3 mb-6">
 			<div
@@ -719,55 +683,16 @@
 		</div>
 
 		<div class="space-y-3">
-			{#each [{ q: "Can both members use the same Shortcut setup?", a: 'Yes! Each person runs the Shortcut on their own iPhone. Set <code>partner_name</code> to your respective member name, or set it to <code>"BOTH"</code> for joint calendar events.' }, { q: "Why are my event times shifted?", a: "Ensure your dates are formatted as <strong>ISO 8601 with local timezone offsets</strong> (e.g. <code>2026-09-14T08:00:00-07:00</code>) rather than UTC." }, { q: "What is external_shortcut_id used for?", a: "It is the unique Apple Calendar item identifier. Shalendar uses it for idempotent updates and clean deletion of removed events." }] as faq, i}
-				<div
-					class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
-				>
-					<h3
-						class="text-xs sm:text-sm font-bold text-white mb-1 flex items-start gap-2"
-					>
-						<span class="text-orange-400 font-mono text-xs"
-							>Q{i + 1}.</span
-						>
-						{faq.q}
-					</h3>
-					<p class="text-xs text-slate-400 leading-relaxed pl-5">
+			{#each [{ q: "Can both members use the same Shortcut setup?", a: 'Yes. Each member can use their own copy with <code>partner_name</code> set to their exact member name. Use <code>"BOTH"</code> only when the same events should appear under every member.' }, { q: "Why are my event times shifted?", a: "Use ISO 8601 timestamps with an explicit offset, such as <code>2026-09-14T08:00:00-07:00</code>, or UTC with <code>Z</code>. Check the selected calendar timezone view as well." }, { q: "What is external_shortcut_id used for?", a: "It identifies the same event across runs. Use a stable unique value; an event title or Name alone may collide with another event." }, { q: "Why did an empty sync leave old events?", a: "With no events, the API needs both <code>sync_start</code> and <code>sync_end</code> to know which stored events to remove." }] as faq, i}
+				<details class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+					<summary class="text-xs sm:text-sm font-bold text-white flex items-start gap-2">
+						<span class="text-orange-400 font-mono text-xs">Q{i + 1}.</span>{faq.q}
+					</summary>
+					<p class="text-xs text-slate-400 leading-relaxed pt-3 pl-5">
 						{@html faq.a}
 					</p>
-				</div>
+				</details>
 			{/each}
-		</div>
-	</section>
-
-	<!-- Bottom CTA -->
-	<section class="py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-		<div
-			class="rounded-3xl p-8 text-center border border-slate-800 bg-slate-900/80 relative overflow-hidden shadow-sm"
-		>
-			<div class="relative">
-				<div
-					class="w-12 h-12 rounded-2xl action-primary flex items-center justify-center mx-auto mb-4 shadow-sm "
-				>
-					<Zap class="w-6 h-6 text-white" />
-				</div>
-				<h2 class="text-xl sm:text-2xl font-bold text-white mb-2">
-					Ready to sync your schedule?
-				</h2>
-				<p
-					class="text-xs sm:text-sm text-slate-400 mb-6 max-w-md mx-auto"
-				>
-					Return to your calendar and complete your setup.
-				</p>
-				<div class="flex flex-col sm:flex-row gap-3 justify-center">
-					<a
-						href={returnUrl}
-						class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl action-primary text-white font-bold text-xs shadow-sm  transition cursor-pointer"
-					>
-						<CalendarIcon class="w-4 h-4" />
-						<span>{returnLabel}</span>
-					</a>
-				</div>
-			</div>
 		</div>
 	</section>
 </main>

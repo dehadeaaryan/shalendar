@@ -170,14 +170,14 @@
 <main class="landing-main">
  <section class="landing-hero">
   <div class="hero-story">
-   <span class="eyebrow"><span class="status-dot"></span>Different schedules. More together.</span>
-   <h1>Make room<br />for <em>each other.</em></h1>
-   <p class="hero-description">Your plans, their plans, and the moments in between. Bring everyone's calendar into one calm, shared space.</p>
-   <div class="hero-details"><span><Users size={15} />Made for sharing</span><span><Clock size={15} />Across timezones</span></div>
+   <span class="eyebrow"><span class="status-dot"></span>Shared calendar</span>
+   <h1>One calendar.<br /><em>Every schedule.</em></h1>
+   <p class="hero-description">See events for everyone in one view. Switch timezones, find free time, and sync Apple Calendar with Shortcuts.</p>
+   <div class="hero-details"><span><Users size={15} />Multiple members</span><span><Clock size={15} />Timezone support</span></div>
    <CalendarPreview />
   </div>
   <div class="auth-panel" id="auth-form">
-   <div class="auth-heading"><span class="eyebrow">Your shared space</span><h2>{activeTab === 'create' ? 'Good plans start here.' : 'Welcome back.'}</h2><p>{activeTab === 'create' ? 'A name, your people, and a little time together.' : 'Pick up where you left off.'}</p></div>
+   <div class="auth-heading"><span class="eyebrow">Get started</span><h2>{activeTab === 'create' ? 'Create a calendar' : 'Open a calendar'}</h2><p>{activeTab === 'create' ? 'Name your calendar, add members, and set a shared password.' : 'Enter your calendar name and shared password.'}</p></div>
 			<!-- Form Tabs -->
 			<div class="auth-tabs">
 				<button
@@ -383,19 +383,19 @@
 					</button>
 				</form>
 			{/if}
-   <p class="form-footnote"><Lock size={12} />One shared password for your people.</p>
+   <p class="form-footnote"><Lock size={12} />Anyone with the name and password can open this calendar.</p>
   </div>
  </section>
  {#if savedCalendars.length > 0}
- <section class="saved-calendars" aria-label="Saved calendars"><span class="eyebrow">Pick up where you left off</span><div>{#each savedCalendars as name}<a href={`/calendar/${encodeURIComponent(name)}`}><CalendarIcon size={16} /><span>{name}</span><ArrowRight size={14} /></a>{/each}</div></section>
+ <section class="saved-calendars" aria-label="Saved calendars"><span class="eyebrow">Recent calendars</span><div>{#each savedCalendars as name}<a href={`/calendar/${encodeURIComponent(name)}`}><CalendarIcon size={16} /><span>{name}</span><ArrowRight size={14} /></a>{/each}</div></section>
  {/if}
  <section class="features-section">
-  <div class="features-heading"><span class="eyebrow">Less coordinating, more connecting</span><h2>Life happens.<br />Stay in the loop.</h2><p>A few thoughtful details to make planning together feel easy.</p></div>
+  <div class="features-heading"><span class="eyebrow">Features</span><h2>Built for shared schedules.</h2><p>View events across members and timezones.</p></div>
   <div class="feature-list">
-   <article><span class="feature-number">01</span><div><h3>Different timezones. Same page.</h3><p>See every plan in your timezone, or switch to someone else's perspective with a tap.</p></div><Clock size={22} /></article>
-   <article><span class="feature-number">02</span><div><h3>Find your next free moment.</h3><p>Compare schedules side by side and find the time when everyone's available.</p></div><Users size={22} /></article>
-   <article><span class="feature-number">03</span><div><h3>Your iPhone, in the loop.</h3><p>Bring Apple Calendar events along with iOS Shortcuts.</p><a href="/help">Set up calendar sync <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
+   <article><span class="feature-number">01</span><div><h3>Timezone views</h3><p>View the calendar in your timezone or a member's timezone.</p></div><Clock size={22} /></article>
+   <article><span class="feature-number">02</span><div><h3>Free time</h3><p>Compare schedules to find times when everyone is available.</p></div><Users size={22} /></article>
+   <article><span class="feature-number">03</span><div><h3>Apple Calendar sync</h3><p>Import events through iOS Shortcuts.</p><a href="/help">Setup guide <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
   </div>
  </section>
 </main>
-<footer class="site-footer"><Brand /><span>A little more time, together.</span><a href="/help">Help & setup <ArrowRight size={14} /></a></footer>
+<footer class="site-footer"><Brand /><a href="/help">Help & setup <ArrowRight size={14} /></a></footer>
