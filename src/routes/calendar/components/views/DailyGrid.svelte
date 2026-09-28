@@ -120,18 +120,18 @@
                         {/if}
 
                         {#each computeEventColumns(getEventsForDayAndMember(dayDate, member.id)) as { evt, col, totalCols }}
+                            {@const eventHeight = getEventHeightPx(evt.startTime, evt.endTime)}
+                            {@const isCompact = eventHeight < 48}
                             <button
                                 type="button"
                                 onclick={() => (calState.selectedEvent = evt)}
-                                class="schedule-event absolute p-2 rounded-xl text-xs font-medium overflow-hidden shadow-sm flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
+                                aria-label="{evt.title}, {formatInTimezone(evt.startTime, activeTimezone)} to {formatInTimezone(evt.endTime, activeTimezone)}"
+                                class="schedule-event absolute {isCompact ? 'p-1.5' : 'p-2'} rounded-xl text-xs font-medium overflow-hidden shadow-sm flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
                                 style="top: {getEventTopPx(
                                     evt.startTime,
                                     activeTimezone,
                                     range.startHour,
-                                )}px; height: {getEventHeightPx(
-                                    evt.startTime,
-                                    evt.endTime,
-                                )}px; left: calc({(col / totalCols) *
+                                )}px; height: {eventHeight}px; left: calc({(col / totalCols) *
                                     100}% + 2px); width: calc({(1 / totalCols) *
                                     100}% - 4px); background-color: {member.displayColor}22; border-left: 3.5px solid {member.displayColor}; border-top: 1px solid {member.displayColor}44"
                             >
@@ -139,17 +139,13 @@
                                     class="font-bold text-white truncate text-[11px] leading-tight w-full"
                                     >{evt.title}</span
                                 >
-                                <span
-                                    class="event-time text-[11px] text-slate-300 font-mono truncate opacity-90 w-full mt-1"
-                                >
-                                    {formatInTimezone(
-                                        evt.startTime,
-                                        activeTimezone,
-                                    )} – {formatInTimezone(
-                                        evt.endTime,
-                                        activeTimezone,
-                                    )}
-                                </span>
+                                {#if !isCompact}
+                                    <span
+                                        class="event-time text-[11px] text-slate-300 font-mono truncate opacity-90 w-full mt-1"
+                                    >
+                                        {formatInTimezone(evt.startTime, activeTimezone)} – {formatInTimezone(evt.endTime, activeTimezone)}
+                                    </span>
+                                {/if}
                             </button>
                         {/each}
                     </div>
