@@ -53,14 +53,48 @@ export function isSameDay(d1: Date, d2: Date) {
     return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 }
 
+function calendarDayKey(date: Date): string {
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function dayKeyInTimezone(date: Date, targetTz: string): string {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        year: "numeric", month: "numeric", day: "numeric", timeZone: targetTz,
+    }).formatToParts(date);
+    const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+    return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 export function isSameDayInTz(d1: Date, isoString: string, targetTz: string): boolean {
     try {
-        const fmt = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", timeZone: targetTz });
-        return fmt.format(d1) === fmt.format(new Date(isoString));
+        return calendarDayKey(d1) === dayKeyInTimezone(new Date(isoString), targetTz);
     } catch (e) {
         const d2 = new Date(isoString);
         return isSameDay(d1, d2);
     }
+}
+
+// Convert a calendar wall-clock time in the selected timezone to an instant.
+export function dateTimeInTimezone(day: Date, hour: number, targetTz: string): Date {
+    const wallTime = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour);
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        year: "numeric", month: "numeric", day: "numeric",
+        hour: "numeric", minute: "numeric", second: "numeric",
+        hourCycle: "h23", timeZone: targetTz,
+    });
+    let instant = wallTime;
+    for (let i = 0; i < 3; i++) {
+        const parts = formatter.formatToParts(new Date(instant));
+        const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+        const displayed = Date.UTC(
+            value("year"), value("month") - 1, value("day"),
+            value("hour"), value("minute"), value("second"),
+        );
+        const adjustment = wallTime - displayed;
+        if (adjustment === 0) break;
+        instant += adjustment;
+    }
+    return new Date(instant);
 }
 
 export function getEventsForDay(dayDate: Date) {
@@ -84,6 +118,16 @@ export function getGridRangeForDay(dayDate: Date) {
         const end = getDecimalHourInTimezone(evt.endTime, tz);
         startHour = Math.min(startHour, Math.max(0, Math.floor(start) - 1));
         endHour = Math.max(endHour, Math.min(24, Math.ceil(end) + 1));
+    }
+    if (isSameDayInTz(dayDate, calState.currentTime.toISOString(), tz)) {
+        const nowHour = getDecimalHourInTimezone(calState.currentTime.toISOString(), tz);
+        if (dayEvents.length === 0) {
+            startHour = Math.max(0, Math.floor(nowHour) - 2);
+            endHour = Math.min(24, Math.ceil(nowHour) + 3);
+        } else {
+            startHour = Math.min(startHour, Math.max(0, Math.floor(nowHour) - 1));
+            endHour = Math.max(endHour, Math.min(24, Math.ceil(nowHour) + 1));
+        }
     }
     return { startHour, endHour, totalHours: endHour - startHour };
 }

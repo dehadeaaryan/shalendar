@@ -1,18 +1,18 @@
 <script lang="ts">
     import { calState } from "../../state.svelte";
     import {
-        getEventsForDay,
         getActiveTimezone,
         formatInTimezone,
         getHourLabel,
         getEventTopPx,
         getEventHeightPx,
+        isSameDayInTz,
+        dateTimeInTimezone,
         HOUR_HEIGHT,
     } from "../../utils";
     import { Sparkles, CalendarHeart, Clock } from "lucide-svelte";
 
     let activeTimezone = $derived(getActiveTimezone());
-    let dayEvents = $derived(getEventsForDay(calState.currentDate));
 
     // Allow user to dynamically select the search window
     let startHour = $state(8);
@@ -24,24 +24,10 @@
 
     let freeSlots = $derived.by(() => {
         const day = calState.currentDate;
-        const windowStart = new Date(
-            day.getFullYear(),
-            day.getMonth(),
-            day.getDate(),
-            startHour,
-            0,
-            0,
-        ).getTime();
-        const windowEnd = new Date(
-            day.getFullYear(),
-            day.getMonth(),
-            day.getDate(),
-            endHour,
-            0,
-            0,
-        ).getTime();
+        const windowStart = dateTimeInTimezone(day, startHour, activeTimezone).getTime();
+        const windowEnd = dateTimeInTimezone(day, endHour, activeTimezone).getTime();
 
-        const intervals = dayEvents
+        const intervals = calState.events
             .map((e) => ({
                 start: new Date(e.startTime).getTime(),
                 end: new Date(e.endTime).getTime(),
@@ -144,11 +130,11 @@
             <CalendarHeart class="w-8 h-8 text-slate-700 mb-3" />
             No mutual free time found in this window. Everyone is booked!
         </div>
-    {:else}
-        <!-- Removed overflow-x-auto so it perfectly fits the screen width -->
-        <div
-            class="border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-sm mt-2"
-        >
+    {/if}
+    <!-- Removed overflow-x-auto so it perfectly fits the screen width -->
+    <div
+        class="border border-slate-800/80 rounded-xl bg-slate-950/80 shadow-sm mt-2"
+    >
             <!-- Changed from min-w-[600px] to w-full so it takes exactly 1 column width -->
             <div
                 class="w-full grid grid-cols-[44px_1fr] sm:grid-cols-[60px_1fr] relative"
@@ -218,8 +204,28 @@
                             </span>
                         </div>
                     {/each}
+
+                    {#if isSameDayInTz(calState.currentDate, calState.currentTime.toISOString(), activeTimezone)}
+                        {@const topPx = getEventTopPx(
+                            calState.currentTime.toISOString(),
+                            activeTimezone,
+                            startHour,
+                        )}
+                        {#if topPx >= 0 && topPx <= (endHour - startHour) * HOUR_HEIGHT}
+                            <div
+                                class="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+                                style="top: {topPx}px;"
+                            >
+                                <div
+                                    class="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-[0_0_6px_rgba(239,68,68,0.8)]"
+                                ></div>
+                                <div
+                                    class="h-[2px] bg-red-500/80 w-full shadow-[0_0_6px_rgba(239,68,68,0.5)]"
+                                ></div>
+                            </div>
+                        {/if}
+                    {/if}
                 </div>
             </div>
-        </div>
-    {/if}
+    </div>
 </div>
