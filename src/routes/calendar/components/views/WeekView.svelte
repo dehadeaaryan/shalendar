@@ -1,24 +1,23 @@
 <script lang="ts">
     import { calState } from "../../state.svelte";
-    import { getDaysInWeek, getEventsForDay, isVisibleEvent, isSameDay } from "../../utils";
+    import { getActiveTimezone, getDaysInWeek, getEventsForDay, isVisibleEvent, isSameDayInTz, formatDateTimeInputInTimezone } from "../../utils";
     import DailyGrid from "./DailyGrid.svelte";
-    import { Maximize2, Minimize2, ChevronDown, ChevronUp, Columns4 } from "lucide-svelte";
+    import { Maximize2, Minimize2, ChevronLeft, Columns4 } from "lucide-svelte";
 
     let collapsedDays = $state<Record<string, boolean>>({});
     let weekDays = $derived(getDaysInWeek(calState.currentDate));
+    let activeTimezone = $derived(getActiveTimezone());
+    let todayKey = $derived(formatDateTimeInputInTimezone(calState.currentTime, activeTimezone).slice(0, 10));
+    let expandedDayWidth = $derived(Math.max(340, 80 + calState.partners.length * 140));
 
     function getDayKey(date: Date) {
-        return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     }
 
     function isDayCollapsed(dayDate: Date, eventCount: number): boolean {
         const key = getDayKey(dayDate);
         if (collapsedDays[key] !== undefined) return collapsedDays[key];
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const check = new Date(dayDate);
-        check.setHours(0, 0, 0, 0);
-        return check.getTime() < now.getTime() || eventCount === 0;
+        return key < todayKey || eventCount === 0;
     }
 
     function toggleDayCollapse(dayDate: Date, eventCount: number) {
@@ -50,34 +49,45 @@
     </div>
 
     <div class="overflow-x-auto pb-2">
-        <div class="grid grid-flow-col auto-cols-[minmax(320px,1fr)] gap-3 min-w-max">
-            {#each weekDays as day}
-                {@const dayEvents = getEventsForDay(day).filter(isVisibleEvent)}
-                {@const isCollapsed = isDayCollapsed(day, dayEvents.length)}
-                <section class={`rounded-2xl border transition-all ${isSameDay(day, new Date()) ? "border-orange-500/50 bg-slate-900/80 shadow-sm" : "border-slate-800/80 bg-slate-950/40"}`}>
-                    <button
-                        type="button"
-                        aria-expanded={!isCollapsed}
-                        onclick={() => toggleDayCollapse(day, dayEvents.length)}
-                        class="w-full min-h-16 p-3 flex items-center justify-between text-left hover:bg-slate-900/60 rounded-2xl transition cursor-pointer"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <span class={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isSameDay(day, new Date()) ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
-                            <span class="text-sm font-bold text-white">{day.toLocaleDateString([], { weekday: "short", month: "short" })}</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-[11px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800/80">{dayEvents.length}</span>
-                            {#if isCollapsed}<ChevronDown class="w-4 h-4 text-slate-400" />{:else}<ChevronUp class="w-4 h-4 text-orange-400" />{/if}
-                        </div>
-                    </button>
+      <div class="flex items-stretch gap-3">
+        {#each weekDays as day (getDayKey(day))}
+            {@const dayEvents = getEventsForDay(day).filter(isVisibleEvent)}
+            {@const isCollapsed = isDayCollapsed(day, dayEvents.length)}
+            {@const isToday = isSameDayInTz(day, calState.currentTime.toISOString(), activeTimezone)}
+            <section
+                style:flex={isCollapsed ? "0 0 64px" : `1 0 ${expandedDayWidth}px`}
+                class={`min-w-0 rounded-2xl border transition-all ${isToday ? "border-orange-500/50 bg-slate-900/80 shadow-sm" : "border-slate-800/80 bg-slate-950/40"}`}
+            >
+                <button
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
+                    onclick={() => toggleDayCollapse(day, dayEvents.length)}
+                    class={`w-full min-h-16 p-3 flex hover:bg-slate-900/60 rounded-2xl transition cursor-pointer ${isCollapsed ? "h-full flex-col items-center gap-2" : "items-center justify-between text-left"}`}
+                >
+                  {#if isCollapsed}
+                    <span class="text-[11px] font-bold text-slate-400">{day.toLocaleDateString([], { weekday: "short" })}</span>
+                    <span class={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isToday ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
+                    <span class="text-[10px] text-slate-400">{day.toLocaleDateString([], { month: "short" })}</span>
+                  {:else}
+                    <div class="flex items-center space-x-3">
+                        <span class={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isToday ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
+                        <span class="text-sm font-bold text-white">{day.toLocaleDateString([], { weekday: "short", month: "short" })}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[11px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800/80">{dayEvents.length}</span>
+                        <ChevronLeft class="w-4 h-4 text-orange-400" />
+                    </div>
+                  {/if}
+                </button>
 
-                    {#if !isCollapsed}
-                        <div class="p-2 pt-0 border-t border-slate-800/60">
-                            <DailyGrid dayDate={day} />
-                        </div>
-                    {/if}
-                </section>
-            {/each}
-        </div>
+                {#if !isCollapsed}
+                    <div class="p-2 pt-0 border-t border-slate-800/60">
+                        <DailyGrid dayDate={day} />
+                    </div>
+                {/if}
+            </section>
+        {/each}
+      </div>
     </div>
 </div>
