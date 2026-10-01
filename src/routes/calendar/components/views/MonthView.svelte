@@ -36,16 +36,25 @@
     >
         {#each monthDays as day}
             <div
-                class={`month-day min-h-[110px] p-2 flex flex-col transition-all ${isSameDay(day.date, new Date()) ? "bg-orange-500/10 border border-orange-500/40 ring-1 ring-orange-500/20" : day.isCurrentMonth ? "bg-slate-900/20" : "bg-slate-950/90 text-slate-600"}`}
+                class={`month-day relative min-h-[110px] p-2 flex flex-col transition-all ${isSameDay(day.date, new Date()) ? "bg-orange-500/10 border border-orange-500/40 ring-1 ring-orange-500/20" : day.isCurrentMonth ? "bg-slate-900/20" : "bg-slate-950/90 text-slate-600"}`}
             >
-                <div class="mb-1.5 flex justify-between items-center">
-                    <span
+                <button
+                    type="button"
+                    aria-label="View {day.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}"
+                    onclick={() => { calState.currentDate = new Date(day.date); calState.viewMode = "today"; }}
+                    class="absolute inset-0 z-0 cursor-pointer"
+                ></button>
+                <div class="relative z-10 mb-1.5 flex justify-between items-center">
+                    <button
+                        type="button"
+                        aria-label="View {day.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}"
+                        onclick={() => { calState.currentDate = new Date(day.date); calState.viewMode = "today"; }}
                         class={`text-xs font-bold w-6 h-6 rounded-full flex justify-center items-center ${isSameDay(day.date, new Date()) ? "bg-orange-500 text-white shadow-sm " : day.isCurrentMonth ? "text-slate-300" : "text-slate-600"}`}
                     >
                         {day.date.getDate()}
-                    </span>
+                    </button>
                 </div>
-                <div class="space-y-1 overflow-y-auto max-h-[85px]">
+                <div class="relative z-10 space-y-1 overflow-y-auto max-h-[85px]">
                     {#each getEventsForDay(day.date).filter(isVisibleEvent) as evt}
                         <button
                             type="button"

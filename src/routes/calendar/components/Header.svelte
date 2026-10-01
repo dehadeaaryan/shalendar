@@ -40,7 +40,7 @@
                         <option value="UTC">UTC</option>
                     </select>
                 </label>
-                <button class="button-primary" onclick={() => calState.showAddModal = true}><Plus size={16} />Add event</button>
+                <button class="button-primary" aria-label="Add event" title="Add event" onclick={() => calState.showAddModal = true}><Plus size={16} /><span>Add event</span></button>
                 <button class="icon-button" aria-label="Calendar settings" title="Calendar settings" onclick={() => calState.showSettingsModal = true}><Settings size={18} /></button>
                 <button class="icon-button" aria-label="Lock calendar" title="Lock calendar" onclick={handleLockCalendar}><Lock size={17} /></button>
             </div>

@@ -5,7 +5,8 @@
         getGridRangeForDay,
         getHourLabel,
         getEventTopPx,
-        getEventHeightPx,
+        getEventSegmentForDay,
+        getEventSegmentTopPx,
         formatInTimezone,
         isSameDayInTz,
         computeEventColumns,
@@ -20,6 +21,7 @@
 
     // Track whether the user wants to see all 24 hours or the auto-fitted range
     let showAllHours = $state(false);
+    const GRID_TOP_PADDING = 16;
 
     // Dynamically calculate the range based on the toggle state
     let range = $derived(
@@ -57,6 +59,7 @@
             </div>
 
             {#each Array.from({ length: range.totalHours }, (_, i) => range.startHour + i) as hr}
+                {#if hr === range.startHour}<div style="height: {GRID_TOP_PADDING}px"></div>{/if}
                 <div
                     class="h-[56px] px-1.5 text-[10px] font-mono text-slate-500 flex items-start pt-1 justify-end"
                 >
@@ -89,18 +92,18 @@
                     </div>
                     <div
                         class="relative"
-                        style="height: {range.totalHours * HOUR_HEIGHT}px"
+                        style="height: {range.totalHours * HOUR_HEIGHT + GRID_TOP_PADDING}px"
                     >
                         {#each Array.from( { length: range.totalHours }, ) as _, idx}
                             <div
                                 class="absolute w-full border-b border-slate-800/30"
-                                style="top: {idx *
+                                style="top: {GRID_TOP_PADDING + idx *
                                     HOUR_HEIGHT}px; height: {HOUR_HEIGHT}px"
                             ></div>
                         {/each}
 
                         {#if isSameDayInTz(dayDate, calState.currentTime.toISOString(), activeTimezone)}
-                            {@const topPx = getEventTopPx(
+                            {@const topPx = GRID_TOP_PADDING + getEventTopPx(
                                 calState.currentTime.toISOString(),
                                 activeTimezone,
                                 range.startHour,
@@ -121,16 +124,16 @@
                         {/if}
 
                         {#each computeEventColumns(getEventsForDayAndMember(dayDate, member.id).filter(isVisibleEvent)) as { evt, col, totalCols }}
-                            {@const eventHeight = getEventHeightPx(evt.startTime, evt.endTime)}
+                            {@const segment = getEventSegmentForDay(evt, dayDate, activeTimezone)}
+                            {@const eventHeight = Math.max(32, segment.durationHours * HOUR_HEIGHT)}
                             {@const isCompact = eventHeight < 48}
                             <button
                                 type="button"
                                 onclick={() => (calState.selectedEvent = evt)}
                                 aria-label="{evt.title}, {formatInTimezone(evt.startTime, activeTimezone)} to {formatInTimezone(evt.endTime, activeTimezone)}"
                                 class="schedule-event absolute {isCompact ? 'p-1.5' : 'p-2'} rounded-xl text-xs font-medium overflow-hidden shadow-sm flex flex-col justify-start text-left transition-all hover:brightness-125 hover:scale-[1.01] cursor-pointer z-10"
-                                style="top: {getEventTopPx(
-                                    evt.startTime,
-                                    activeTimezone,
+                                style="top: {GRID_TOP_PADDING + getEventSegmentTopPx(
+                                    segment.startTime,
                                     range.startHour,
                                 )}px; height: {eventHeight}px; left: calc({(col / totalCols) *
                                     100}% + 2px); width: calc({(1 / totalCols) *

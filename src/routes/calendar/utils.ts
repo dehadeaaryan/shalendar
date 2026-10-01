@@ -26,6 +26,15 @@ export function formatDateTimeInput(date: Date): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+export function formatDateTimeInputInTimezone(date: Date, targetTz: string): string {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: targetTz,
+    }).formatToParts(date);
+    const value = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+    return `${value("year")}-${value("month")}-${value("day")}T${value("hour")}:${value("minute")}`;
+}
+
 export function formatInTimezone(isoString: string, targetTz: string): string {
     try {
         return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: targetTz });
@@ -65,6 +74,16 @@ function dayKeyInTimezone(date: Date, targetTz: string): string {
     return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
+function addCalendarDays(date: Date, days: number): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+export function getDayBoundsInTimezone(day: Date, targetTz: string) {
+    const start = dateTimeInTimezone(day, 0, targetTz);
+    const end = dateTimeInTimezone(addCalendarDays(day, 1), 0, targetTz);
+    return { start, end };
+}
+
 export function isSameDayInTz(d1: Date, isoString: string, targetTz: string): boolean {
     try {
         return calendarDayKey(d1) === dayKeyInTimezone(new Date(isoString), targetTz);
@@ -75,8 +94,8 @@ export function isSameDayInTz(d1: Date, isoString: string, targetTz: string): bo
 }
 
 // Convert a calendar wall-clock time in the selected timezone to an instant.
-export function dateTimeInTimezone(day: Date, hour: number, targetTz: string): Date {
-    const wallTime = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour);
+export function dateTimeInTimezone(day: Date, hour: number, targetTz: string, minute = 0): Date {
+    const wallTime = Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute);
     const formatter = new Intl.DateTimeFormat("en-US", {
         year: "numeric", month: "numeric", day: "numeric",
         hour: "numeric", minute: "numeric", second: "numeric",
@@ -97,14 +116,43 @@ export function dateTimeInTimezone(day: Date, hour: number, targetTz: string): D
     return new Date(instant);
 }
 
+export function dateTimeInputInTimezone(value: string, targetTz: string): Date {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+    if (!match) return new Date(NaN);
+    const [, year, month, day, hour, minute] = match;
+    return dateTimeInTimezone(
+        new Date(Number(year), Number(month) - 1, Number(day)),
+        Number(hour), targetTz, Number(minute),
+    );
+}
+
 export function getEventsForDay(dayDate: Date) {
     const tz = getActiveTimezone();
-    return calState.events.filter((evt: any) => isSameDayInTz(dayDate, evt.startTime, tz));
+    const { start, end } = getDayBoundsInTimezone(dayDate, tz);
+    return calState.events.filter((evt: any) =>
+        new Date(evt.startTime).getTime() < end.getTime() && new Date(evt.endTime).getTime() > start.getTime()
+    );
 }
 
 export function getEventsForDayAndMember(dayDate: Date, memberId: string) {
     const tz = getActiveTimezone();
-    return calState.events.filter((evt: any) => evt.partnerId === memberId && isSameDayInTz(dayDate, evt.startTime, tz));
+    const { start, end } = getDayBoundsInTimezone(dayDate, tz);
+    return calState.events.filter((evt: any) =>
+        evt.partnerId === memberId && new Date(evt.startTime).getTime() < end.getTime() && new Date(evt.endTime).getTime() > start.getTime()
+    );
+}
+
+export function getEventSegmentForDay(evt: any, dayDate: Date, targetTz: string) {
+    const { start: dayStart, end: dayEnd } = getDayBoundsInTimezone(dayDate, targetTz);
+    const start = new Date(Math.max(new Date(evt.startTime).getTime(), dayStart.getTime()));
+    const end = new Date(Math.min(new Date(evt.endTime).getTime(), dayEnd.getTime()));
+    const startsBeforeDay = new Date(evt.startTime).getTime() < dayStart.getTime();
+    const endsAfterDay = new Date(evt.endTime).getTime() >= dayEnd.getTime();
+    return {
+        startTime: startsBeforeDay ? 0 : getDecimalHourInTimezone(start.toISOString(), targetTz),
+        endTime: endsAfterDay ? 24 : getDecimalHourInTimezone(end.toISOString(), targetTz),
+        durationHours: Math.max(0, (end.getTime() - start.getTime()) / 3600000),
+    };
 }
 
 export function isLongEvent(evt: any): boolean {
@@ -123,8 +171,9 @@ export function getGridRangeForDay(dayDate: Date) {
 
     for (const evt of dayEvents) {
         if (!isVisibleEvent(evt)) continue;
-        const start = getDecimalHourInTimezone(evt.startTime, tz);
-        const end = getDecimalHourInTimezone(evt.endTime, tz);
+        const segment = getEventSegmentForDay(evt, dayDate, tz);
+        const start = segment.startTime;
+        const end = segment.endTime;
         startHour = Math.min(startHour, Math.max(0, Math.floor(start) - 1));
         endHour = Math.max(endHour, Math.min(24, Math.ceil(end) + 1));
     }
@@ -143,6 +192,10 @@ export function getGridRangeForDay(dayDate: Date) {
 
 export function getEventTopPx(startTimeISO: string, targetTz: string, startHour: number): number {
     return (getDecimalHourInTimezone(startTimeISO, targetTz) - startHour) * HOUR_HEIGHT;
+}
+
+export function getEventSegmentTopPx(segmentStartHour: number, startHour: number): number {
+    return (segmentStartHour - startHour) * HOUR_HEIGHT;
 }
 
 export function getEventHeightPx(startTimeISO: string, endTimeISO: string): number {

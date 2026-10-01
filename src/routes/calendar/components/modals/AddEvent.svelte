@@ -1,15 +1,16 @@
 <script lang="ts">
  import Modal from "$lib/components/Modal.svelte";
     import { calState } from "../../state.svelte";
-    import { formatDateTimeInput } from "../../utils";
+    import { dateTimeInputInTimezone, formatDateTimeInputInTimezone, getActiveTimezone } from "../../utils";
     import { invalidateAll } from "$app/navigation";
     import { CalendarPlus, X, AlertTriangle } from "lucide-svelte";
 
     let newEventTitle = $state("");
     let newEventPartnerId = $state(calState.viewerPartnerId || calState.partners[0]?.id || "");
-    let newEventStart = $state(formatDateTimeInput(new Date()));
+    let activeTimezone = $derived(getActiveTimezone());
+    let newEventStart = $state(formatDateTimeInputInTimezone(new Date(), getActiveTimezone()));
     let newEventEnd = $state(
-        formatDateTimeInput(new Date(Date.now() + 3600000)),
+        formatDateTimeInputInTimezone(new Date(Date.now() + 3600000), getActiveTimezone()),
     );
     let addError = $state("");
     let addLoading = $state(false);
@@ -25,7 +26,7 @@
             addError = "Please fill out all event fields";
             return;
         }
-        if (new Date(newEventEnd) <= new Date(newEventStart)) {
+        if (dateTimeInputInTimezone(newEventEnd, activeTimezone) <= dateTimeInputInTimezone(newEventStart, activeTimezone)) {
             addError = "End time must be after start time";
             return;
         }
@@ -40,8 +41,8 @@
                     calendarName: calState.calendarName,
                     partnerId: newEventPartnerId,
                     title: newEventTitle,
-                    startTime: new Date(newEventStart).toISOString(),
-                    endTime: new Date(newEventEnd).toISOString(),
+                    startTime: dateTimeInputInTimezone(newEventStart, activeTimezone).toISOString(),
+                    endTime: dateTimeInputInTimezone(newEventEnd, activeTimezone).toISOString(),
                 }),
             });
             if (!res.ok) {

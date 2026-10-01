@@ -51,14 +51,16 @@
             <button aria-pressed={calState.viewMode === view.key} onclick={() => calState.viewMode = view.key}><view.icon size={15} /><span>{view.label}</span></button>
         {/each}
     </div>
-    <button
-        type="button"
-        class="button-secondary flex items-center gap-1.5"
-        aria-pressed={calState.showLongEvents}
-        onclick={toggleLongEvents}
-        title="Toggle events lasting 23 hours or longer"
-    >
-        {#if calState.showLongEvents}<Eye size={15} />{:else}<EyeOff size={15} />{/if}
-        <span>{calState.showLongEvents ? 'Hide 23+ hr' : 'Show 23+ hr'}</span>
-    </button>
+    <div class="toolbar-options">
+        <button
+            type="button"
+            class="button-secondary long-events-toggle"
+            aria-pressed={calState.showLongEvents}
+            onclick={toggleLongEvents}
+            title="Toggle events lasting 23 hours or longer"
+        >
+            {#if calState.showLongEvents}<Eye size={15} />{:else}<EyeOff size={15} />{/if}
+            <span>{calState.showLongEvents ? 'Hide 23+ hr' : 'Show 23+ hr'}</span>
+        </button>
+    </div>
 </div>

@@ -2,7 +2,8 @@
  import Modal from "$lib/components/Modal.svelte";
     import { calState } from "../../state.svelte";
     import {
-        formatDateTimeInput,
+        dateTimeInputInTimezone,
+        formatDateTimeInputInTimezone,
         formatInTimezone,
         getActiveTimezone,
         getMemberColor,
@@ -28,10 +29,10 @@
     let editTitle = $state(calState.selectedEvent?.title || "");
     let editPartnerId = $state(calState.selectedEvent?.partnerId || "");
     let editStart = $state(
-        formatDateTimeInput(new Date(calState.selectedEvent?.startTime)),
+        formatDateTimeInputInTimezone(new Date(calState.selectedEvent?.startTime), getActiveTimezone()),
     );
     let editEnd = $state(
-        formatDateTimeInput(new Date(calState.selectedEvent?.endTime)),
+        formatDateTimeInputInTimezone(new Date(calState.selectedEvent?.endTime), getActiveTimezone()),
     );
     let editError = $state("");
     let editLoading = $state(false);
@@ -42,7 +43,7 @@
             editError = "Please fill out all event fields";
             return;
         }
-        if (new Date(editEnd) <= new Date(editStart)) {
+        if (dateTimeInputInTimezone(editEnd, activeTimezone) <= dateTimeInputInTimezone(editStart, activeTimezone)) {
             editError = "End time must be after start time";
             return;
         }
@@ -58,8 +59,8 @@
                     eventId: calState.selectedEvent.id,
                     partnerId: editPartnerId,
                     title: editTitle,
-                    startTime: new Date(editStart).toISOString(),
-                    endTime: new Date(editEnd).toISOString(),
+                    startTime: dateTimeInputInTimezone(editStart, activeTimezone).toISOString(),
+                    endTime: dateTimeInputInTimezone(editEnd, activeTimezone).toISOString(),
                 }),
             });
             if (!res.ok) {
