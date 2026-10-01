@@ -2,7 +2,7 @@
     import { calState } from "../../state.svelte";
     import { getActiveTimezone, getDaysInWeek, getEventsForDay, isVisibleEvent, isSameDayInTz, formatDateTimeInputInTimezone } from "../../utils";
     import DailyGrid from "./DailyGrid.svelte";
-    import { Maximize2, Minimize2, ChevronLeft, Columns4 } from "lucide-svelte";
+    import { Maximize2, Minimize2, ChevronDown, ChevronLeft, Columns4 } from "lucide-svelte";
 
     let collapsedDays = $state<Record<string, boolean>>({});
     let weekDays = $derived(getDaysInWeek(calState.currentDate));
@@ -49,26 +49,27 @@
     </div>
 
     <div class="overflow-x-auto pb-2">
-      <div class="flex items-stretch gap-3">
+      <div class="flex flex-col sm:flex-row items-stretch gap-3">
         {#each weekDays as day (getDayKey(day))}
             {@const dayEvents = getEventsForDay(day).filter(isVisibleEvent)}
             {@const isCollapsed = isDayCollapsed(day, dayEvents.length)}
             {@const isToday = isSameDayInTz(day, calState.currentTime.toISOString(), activeTimezone)}
             <section
-                style:flex={isCollapsed ? "0 0 64px" : `1 0 ${expandedDayWidth}px`}
-                class={`min-w-0 rounded-2xl border transition-all ${isToday ? "border-orange-500/50 bg-slate-900/80 shadow-sm" : "border-slate-800/80 bg-slate-950/40"}`}
+                style:--day-flex={isCollapsed ? "0 0 64px" : `1 0 ${expandedDayWidth}px`}
+                class={`flex-none sm:flex-[var(--day-flex)] min-w-0 rounded-2xl border transition-all ${isToday ? "border-orange-500/50 bg-slate-900/80 shadow-sm" : "border-slate-800/80 bg-slate-950/40"}`}
             >
                 <button
                     type="button"
                     aria-expanded={!isCollapsed}
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
                     onclick={() => toggleDayCollapse(day, dayEvents.length)}
-                    class={`w-full min-h-16 p-3 flex hover:bg-slate-900/60 rounded-2xl transition cursor-pointer ${isCollapsed ? "h-full flex-col items-center gap-2" : "items-center justify-between text-left"}`}
+                    class={`w-full min-h-16 p-3 flex hover:bg-slate-900/60 rounded-2xl transition cursor-pointer ${isCollapsed ? "sm:h-full sm:flex-col items-center gap-2" : "items-center justify-between text-left"}`}
                 >
                   {#if isCollapsed}
                     <span class="text-[11px] font-bold text-slate-400">{day.toLocaleDateString([], { weekday: "short" })}</span>
-                    <span class={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isToday ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
+                    <span class={`order-first sm:order-none text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isToday ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
                     <span class="text-[10px] text-slate-400">{day.toLocaleDateString([], { month: "short" })}</span>
+                    <ChevronDown class="ml-auto w-4 h-4 text-slate-400 sm:hidden" />
                   {:else}
                     <div class="flex items-center space-x-3">
                         <span class={`text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center ${isToday ? "bg-orange-500 text-white shadow-sm" : "bg-slate-800 text-slate-300"}`}>{day.getDate()}</span>
@@ -76,7 +77,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-[11px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800/80">{dayEvents.length}</span>
-                        <ChevronLeft class="w-4 h-4 text-orange-400" />
+                        <ChevronLeft class="w-4 h-4 text-orange-400 rotate-90 sm:rotate-0" />
                     </div>
                   {/if}
                 </button>
