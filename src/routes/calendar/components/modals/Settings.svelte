@@ -22,6 +22,7 @@
     let settingsMessage = $state("");
     let settingsLoading = $state(false);
     let newMemberName = $state("");
+    let newMemberPassword = $state("");
     let copiedEndpoint = $state(false);
 
     async function handleSaveSettings() {
@@ -29,7 +30,7 @@
         settingsLoading = true;
         try {
             for (const m of memberSettings) {
-                await fetch("/api/calendar", {
+                const res = await fetch("/api/calendar", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -40,6 +41,7 @@
                         timezone: m.timezone,
                     }),
                 });
+                if (!res.ok) throw new Error((await res.json()).error || "Failed to save member settings");
             }
             settingsMessage = "Member settings saved successfully!";
             await invalidateAll();
@@ -54,18 +56,25 @@
     async function handleAddMember() {
         if (!newMemberName.trim()) return;
         try {
-            await fetch("/api/calendar", {
+            const res = await fetch("/api/calendar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     action: "create_member",
                     calendarName: calState.calendarName,
                     name: newMemberName.trim(),
+                    accessPassword: newMemberPassword,
                     displayColor: "#3b82f6",
                     timezone: "UTC",
                 }),
             });
+            if (!res.ok) {
+                const result = await res.json();
+                settingsMessage = result.error || "Could not add member.";
+                return;
+            }
             newMemberName = "";
+            newMemberPassword = "";
             settingsMessage = "Member added successfully!";
             await invalidateAll();
             memberSettings = calState.partners.map((p: any) => ({ ...p }));
@@ -219,7 +228,7 @@
                             <div
                                 class="p-5 rounded-2xl bg-slate-950/60 border border-slate-800/80 relative space-y-4 shadow-sm group hover:border-slate-700 transition-colors"
                             >
-                                <button
+                                {#if !calState.privacyEnabled || (calState.viewerIsOwner && member.id !== calState.viewerPartnerId)}<button
                                     type="button"
                                     onclick={() =>
                                         handleDeleteMember(
@@ -230,7 +239,7 @@
                                     title="Remove Member"
                                 >
                                     <UserX class="w-4 h-4" />
-                                </button>
+                                </button>{/if}
 
                                 <div class="space-y-4">
                                     <div>
@@ -243,6 +252,7 @@
                                             id={`member-name-${idx}`}
                                             type="text"
                                             bind:value={member.name}
+                                            disabled={calState.privacyEnabled && !calState.viewerIsOwner}
                                             class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm font-semibold text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
                                         />
                                     </div>
@@ -255,6 +265,7 @@
                                         <select
                                             id={`member-tz-${idx}`}
                                             bind:value={member.timezone}
+                                            disabled={calState.privacyEnabled && !calState.viewerIsOwner}
                                             class="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition cursor-pointer appearance-none"
                                             style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%24%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1.2em 1.2em;"
                                         >
@@ -273,6 +284,7 @@
                                                 id={`member-color-${idx}`}
                                                 type="color"
                                                 bind:value={member.displayColor}
+                                                disabled={calState.privacyEnabled && !calState.viewerIsOwner}
                                                 class="absolute -top-2 -left-2 w-12 h-12 cursor-pointer bg-transparent border-0"
                                             />
                                         </div>
@@ -287,7 +299,7 @@
                         {/each}
                     </div>
 
-                    <div class="flex justify-end">
+                    {#if !calState.privacyEnabled || calState.viewerIsOwner}<div class="flex justify-end">
                         <button
                             type="button"
                             onclick={handleSaveSettings}
@@ -304,9 +316,9 @@
                                 <span>Save Changes</span>
                             {/if}
                         </button>
-                    </div>
+                    </div>{/if}
 
-                    <div class="mt-8 pt-6 border-t border-slate-800/80">
+                    {#if !calState.privacyEnabled || calState.viewerIsOwner}<div class="mt-8 pt-6 border-t border-slate-800/80">
                         <h4
                             class="text-sm font-bold text-white flex items-center space-x-2 mb-4"
                         >
@@ -322,16 +334,26 @@
                                 placeholder="Enter member's name..."
                                 class="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 transition"
                             />
+                            {#if calState.privacyEnabled}
+                                <input
+                                    type="password"
+                                    minlength="8"
+                                    bind:value={newMemberPassword}
+                                    placeholder="Access password (8+ chars)"
+                                    class="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 transition"
+                                />
+                            {/if}
                             <button
                                 type="button"
                                 onclick={handleAddMember}
-                                disabled={!newMemberName.trim()}
+                                disabled={!newMemberName.trim() || (calState.privacyEnabled && (!calState.viewerIsOwner || newMemberPassword.length < 8))}
                                 class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold transition disabled:opacity-50 cursor-pointer whitespace-nowrap active:scale-95"
                             >
                                 Add Member
                             </button>
                         </div>
-                    </div>
+                        {#if calState.privacyEnabled && calState.viewerIsOwner}<p class="text-[11px] leading-relaxed text-slate-500 mt-2">Share this new member’s access password directly with them.</p>{/if}
+                    </div>{/if}
                 </div>
             {:else if activeSettingsTab === "sync"}
                 <div class="space-y-6 animate-in fade-in duration-300">
@@ -349,10 +371,10 @@
                                 </div>
                                 <div>
                                     <h4 class="text-sm font-bold text-white">
-                                        iOS Shortcuts Sync
+                                        Apple & Google Calendar Sync
                                     </h4>
                                     <p class="text-xs text-slate-400 mt-0.5">
-                                        Add events directly from your iPhone
+                                        Import from iOS Shortcuts or Google Apps Script
                                     </p>
                                 </div>
                             </div>
@@ -361,7 +383,7 @@
                                 target="_blank"
                                 class="flex items-center justify-center space-x-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-xl border border-orange-500/20 transition cursor-pointer whitespace-nowrap"
                             >
-                                <span>View Setup Guide</span>
+                                <span>View Sync Setup Guide</span>
                                 <ExternalLink class="w-3.5 h-3.5" />
                             </a>
                         </div>

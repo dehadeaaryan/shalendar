@@ -3,6 +3,10 @@ export const calState = $state({
     viewMode: "today" as "month" | "week" | "today" | "agenda" | "match",
     currentTime: new Date(),
     selectedTimezonePerspective: "LOCAL",
+    privacyEnabled: false,
+    viewerPartnerId: null as string | null,
+    viewerIsOwner: false,
+    showLongEvents: false,
 
     showAddModal: false,
     showSettingsModal: false,

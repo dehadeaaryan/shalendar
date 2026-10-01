@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 
 	const token = cookies.get(`session_${calendarName}`);
 	const session = verifySessionToken(token || '', calendarName);
-	const isAuthenticated = !!session;
+	const isAuthenticated = !!session && (!calendar.privacyEnabled || !!session.partnerId);
 
 	let partners: any[] = [];
 	let events: any[] = [];
@@ -27,17 +27,25 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 
 		const partnerIds = partners.map((p) => p.id);
 		if (partnerIds.length > 0) {
-			events = await db
-				.select()
-				.from(schema.events)
-				.where(inArray(schema.events.partnerId, partnerIds));
+				const calendarEvents = await db
+					.select()
+					.from(schema.events)
+					.where(inArray(schema.events.partnerId, partnerIds));
+				events = calendar.privacyEnabled
+					? calendarEvents.map((event) =>
+							event.partnerId === session?.partnerId ? event : { ...event, title: 'Busy' }
+						)
+					: calendarEvents;
 		}
 	}
 
 	return {
 		calendarName: calendar.name,
+		privacyEnabled: calendar.privacyEnabled,
+		viewerPartnerId: isAuthenticated ? session?.partnerId || null : null,
+		viewerIsOwner: !calendar.privacyEnabled || session?.partnerId === calendar.ownerPartnerId,
 		isAuthenticated,
-		partners,
+		partners: partners.map(({ accessPasswordHash: _passwordHash, ...partner }) => partner),
 		events
 	};
 };

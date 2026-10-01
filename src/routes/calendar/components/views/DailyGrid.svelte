@@ -11,6 +11,7 @@
         computeEventColumns,
         HOUR_HEIGHT,
         getEventsForDayAndMember,
+        isVisibleEvent,
     } from "../../utils";
 
     let { dayDate } = $props<{ dayDate: Date }>();
@@ -119,7 +120,7 @@
                             {/if}
                         {/if}
 
-                        {#each computeEventColumns(getEventsForDayAndMember(dayDate, member.id)) as { evt, col, totalCols }}
+                        {#each computeEventColumns(getEventsForDayAndMember(dayDate, member.id).filter(isVisibleEvent)) as { evt, col, totalCols }}
                             {@const eventHeight = getEventHeightPx(evt.startTime, evt.endTime)}
                             {@const isCompact = eventHeight < 48}
                             <button

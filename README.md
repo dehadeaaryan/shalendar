@@ -1,6 +1,6 @@
 # Shalendar
 
-Shalendar is a shared calendar for multiple members and timezones. It provides day, week, month, agenda, and free time views, with optional Apple Calendar sync through iOS Shortcuts.
+Shalendar is a shared calendar for multiple members and timezones. It provides day, week, month, agenda, and free time views, optional privacy-capable calendars, and event sync from Apple Calendar through iOS Shortcuts or Google Calendar through Google Apps Script.
 
 ## Development
 
@@ -18,4 +18,4 @@ bun run check
 bun run build
 ```
 
-The app uses SvelteKit with the Node adapter. Configure the database and authentication settings in `.env` before using calendar features locally.
+The app uses SvelteKit with the Node adapter. Configure `DATABASE_URL` and a stable, high-entropy `SESSION_SECRET` in `.env` before using calendar features. Keep the session secret unchanged between deployments so existing sign-ins remain valid.

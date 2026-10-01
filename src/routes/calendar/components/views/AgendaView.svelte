@@ -1,6 +1,6 @@
 <script lang="ts">
     import { calState } from "../../state.svelte";
-    import { formatInTimezone, getActiveTimezone } from "../../utils";
+    import { formatInTimezone, getActiveTimezone, isVisibleEvent } from "../../utils";
     import { List, Clock, Trash2 } from "lucide-svelte";
     import { invalidateAll } from "$app/navigation";
 
@@ -12,7 +12,7 @@
             .filter(
                 (evt: any) =>
                     new Date(evt.endTime).getTime() >
-                    calState.currentTime.getTime(),
+                        calState.currentTime.getTime() && isVisibleEvent(evt),
             )
             .sort(
                 (a: any, b: any) =>
@@ -127,14 +127,14 @@
                             </div>
                         </div>
                     </button>
-                    <button
+                    {#if !calState.privacyEnabled || evt.partnerId === calState.viewerPartnerId}<button
                         type="button"
                         onclick={() => handleDeleteEvent(evt.id)}
                         class="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer self-end sm:self-center"
                         title="Delete event"
                     >
                         <Trash2 class="w-4 h-4" />
-                    </button>
+                    </button>{/if}
                 </div>
             {/each}
         </div>

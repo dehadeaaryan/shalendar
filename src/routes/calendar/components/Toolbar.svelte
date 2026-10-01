@@ -1,7 +1,7 @@
 <script lang="ts">
     import { calState } from '../state.svelte';
-    import { getDaysInWeek } from '../utils';
-    import { ChevronLeft, ChevronRight, Sun, Columns4, CalendarDays, List, Sparkles } from 'lucide-svelte';
+    import { getDaysInWeek, isLongEvent } from '../utils';
+    import { ChevronLeft, ChevronRight, Sun, Columns4, CalendarDays, List, Sparkles, Eye, EyeOff } from 'lucide-svelte';
 
     const views = [
         { key: 'today', label: 'Day', icon: Sun },
@@ -27,6 +27,12 @@
         }
         calState.currentDate = date;
     }
+    function toggleLongEvents() {
+        calState.showLongEvents = !calState.showLongEvents;
+        if (!calState.showLongEvents && calState.selectedEvent && isLongEvent(calState.selectedEvent)) {
+            calState.selectedEvent = null;
+        }
+    }
 </script>
 
 <div class="calendar-toolbar">
@@ -45,4 +51,14 @@
             <button aria-pressed={calState.viewMode === view.key} onclick={() => calState.viewMode = view.key}><view.icon size={15} /><span>{view.label}</span></button>
         {/each}
     </div>
+    <button
+        type="button"
+        class="button-secondary flex items-center gap-1.5"
+        aria-pressed={calState.showLongEvents}
+        onclick={toggleLongEvents}
+        title="Toggle events lasting 23 hours or longer"
+    >
+        {#if calState.showLongEvents}<Eye size={15} />{:else}<EyeOff size={15} />{/if}
+        <span>{calState.showLongEvents ? 'Hide 23+ hr' : 'Show 23+ hr'}</span>
+    </button>
 </div>

@@ -45,9 +45,10 @@
 	// Create Form state
 	let createName = $state('');
 	let createPassword = $state('');
+	let privacyEnabled = $state(false);
 	let members = $state([
-		{ name: 'Person 1', displayColor: '#f97316', timezone: 'America/Los_Angeles' },
-		{ name: 'Person 2', displayColor: '#3b82f6', timezone: 'America/New_York' }
+		{ name: 'Person 1', displayColor: '#f97316', timezone: 'America/Los_Angeles', accessPassword: '' },
+		{ name: 'Person 2', displayColor: '#3b82f6', timezone: 'America/New_York', accessPassword: '' }
 	]);
 
 	let createError = $state('');
@@ -55,6 +56,7 @@
 
 	// Open Form state
 	let openName = $state('');
+	let openMemberName = $state('');
 	let openPassword = $state('');
 	let openError = $state('');
 	let openLoading = $state(false);
@@ -89,7 +91,8 @@
 			{
 				name: `Person ${idx + 1}`,
 				displayColor: DEFAULT_COLORS[idx % DEFAULT_COLORS.length],
-				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+				accessPassword: ''
 			}
 		];
 	}
@@ -105,6 +108,22 @@
 			createError = 'Please provide both calendar name and password';
 			return;
 		}
+		if (privacyEnabled && createPassword.length < 8) {
+			createError = 'Person 1’s access password must be at least 8 characters.';
+			return;
+		}
+		if (privacyEnabled && members.some((member, idx) => idx > 0 && (member.accessPassword.length < 8 || member.accessPassword === createPassword))) {
+			createError = 'Set an access password of at least 8 characters for each additional member.';
+			return;
+		}
+		if (privacyEnabled && new Set(members.map((member) => member.name.trim().toLowerCase())).size !== members.length) {
+			createError = 'Each privacy calendar member needs a unique name.';
+			return;
+		}
+		if (privacyEnabled && new Set([createPassword, ...members.slice(1).map((member) => member.accessPassword)]).size !== members.length) {
+			createError = 'Each privacy calendar member needs a different password.';
+			return;
+		}
 
 		createLoading = true;
 		try {
@@ -115,7 +134,11 @@
 					action: 'create_calendar',
 					name: createName,
 					password: createPassword,
-					members
+					privacyEnabled,
+					members: members.map((member, idx) => ({
+						...member,
+						accessPassword: idx === 0 ? createPassword : member.accessPassword
+					}))
 				})
 			});
 			const data = await res.json();
@@ -147,7 +170,8 @@
 				body: JSON.stringify({
 					action: 'login',
 					name: openName,
-					password: openPassword
+					password: openPassword,
+					partnerName: openMemberName
 				})
 			});
 			const data = await res.json();
@@ -172,12 +196,12 @@
   <div class="hero-story">
    <span class="eyebrow"><span class="status-dot"></span>Shared calendar</span>
    <h1>One calendar.<br /><em>Every schedule.</em></h1>
-   <p class="hero-description">See events for everyone in one view. Switch timezones, find free time, and sync Apple Calendar with Shortcuts.</p>
+   <p class="hero-description">See events for everyone in one view. Switch timezones, find free time, and sync Apple or Google Calendar.</p>
    <div class="hero-details"><span><Users size={15} />Multiple members</span><span><Clock size={15} />Timezone support</span></div>
    <CalendarPreview />
   </div>
   <div class="auth-panel" id="auth-form">
-   <div class="auth-heading"><span class="eyebrow">Get started</span><h2>{activeTab === 'create' ? 'Create a calendar' : 'Open a calendar'}</h2><p>{activeTab === 'create' ? 'Name your calendar, add members, and set a shared password.' : 'Enter your calendar name and shared password.'}</p></div>
+   <div class="auth-heading"><span class="eyebrow">Get started</span><h2>{activeTab === 'create' ? 'Create a calendar' : 'Open a calendar'}</h2><p>{activeTab === 'create' ? 'Name your calendar, add members, and choose how event details are shared.' : 'Enter the password for your member account or standard shared calendar.'}</p></div>
 			<!-- Form Tabs -->
 			<div class="auth-tabs">
 				<button
@@ -232,13 +256,13 @@
 					</div>
 
 					<div>
-						<label for="create-password-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Shared Password</label>
+						<label for="create-password-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{privacyEnabled ? 'Person 1 Access Password' : 'Shared Password'}</label>
 						<div class="relative">
 							<input
 								id="create-password-input" autocomplete="new-password"
 								type={showCreatePassword ? 'text' : 'password'}
 								bind:value={createPassword}
-								placeholder="Choose a shared password"
+								placeholder={privacyEnabled ? 'Choose Person 1’s password' : 'Choose a shared password'}
 								required
 								class="w-full px-4 py-3 rounded-xl glass-input pl-10 pr-10 text-sm"
 							/>
@@ -255,6 +279,13 @@
 					</div>
 
 					<!-- Dynamic Member Customization -->
+					<div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+						<label class="flex items-start gap-3 cursor-pointer">
+							<input type="checkbox" bind:checked={privacyEnabled} class="mt-0.5 accent-orange-500" />
+							<span><strong class="block text-xs text-slate-200">Privacy capable</strong><small class="block text-[11px] leading-relaxed text-slate-400 mt-1">Each person uses a separate password. Other members see your events as Busy. This choice is permanent for this calendar.</small></span>
+						</label>
+					</div>
+
 					<div class="pt-3 border-t border-slate-800 space-y-3">
 						<div class="flex items-center justify-between">
 							<span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Calendar Members ({members.length})</span>
@@ -299,10 +330,17 @@
 										</select>
 									</div>
 
-									<div class="flex items-center space-x-2 pt-1">
+										<div class="flex items-center space-x-2 pt-1">
 										<input type="color" aria-label={`Person ${idx + 1} color`} bind:value={member.displayColor} class="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
 										<span class="text-[11px] text-slate-400 font-mono">{member.displayColor}</span>
 									</div>
+									{#if privacyEnabled && idx === 0}
+										<p class="text-[10px] leading-relaxed text-slate-500">Person 1 signs in with the password above.</p>
+									{:else if privacyEnabled}
+										<label class="block text-[11px] text-slate-400" for={`member-access-${idx}`}>Access password for {member.name || `Person ${idx + 1}`}</label>
+										<input id={`member-access-${idx}`} type="password" autocomplete="new-password" minlength="8" bind:value={member.accessPassword} placeholder="At least 8 characters" class="w-full px-3 py-2 rounded-lg glass-input text-xs" />
+										<p class="text-[10px] leading-relaxed text-slate-500">Share this password privately with this person. It is only stored as a hash.</p>
+									{/if}
 								</div>
 							{/each}
 						</div>
@@ -332,6 +370,12 @@
 					{/if}
 
 					<div>
+						<label for="open-member-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Your Member Name <span class="normal-case tracking-normal">(privacy calendars)</span></label>
+						<input id="open-member-input" type="text" bind:value={openMemberName} placeholder="Your name in this calendar" class="w-full px-4 py-3 rounded-xl glass-input text-sm" />
+						<p class="text-[11px] text-slate-500 mt-1">Required for privacy calendars. Leave blank for standard calendars.</p>
+					</div>
+
+					<div>
 						<label for="open-name-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Calendar Name</label>
 						<div class="relative">
 							<input
@@ -353,7 +397,7 @@
 								id="open-password-input" autocomplete="current-password"
 								type={showOpenPassword ? 'text' : 'password'}
 								bind:value={openPassword}
-								placeholder="Enter calendar password"
+								placeholder="Enter your password"
 								required
 								class="w-full px-4 py-3 rounded-xl glass-input pl-10 pr-10 text-sm"
 							/>
@@ -383,7 +427,7 @@
 					</button>
 				</form>
 			{/if}
-   <p class="form-footnote"><Lock size={12} />Anyone with the name and password can open this calendar.</p>
+  <p class="form-footnote"><Lock size={12} />{activeTab === 'create' ? privacyEnabled ? 'Privacy is fixed when the calendar is created.' : 'Anyone with the name and password can open this calendar.' : 'Privacy calendars require each member’s own password.'}</p>
   </div>
  </section>
  {#if savedCalendars.length > 0}
@@ -394,7 +438,7 @@
   <div class="feature-list">
    <article><span class="feature-number">01</span><div><h3>Timezone views</h3><p>View the calendar in your timezone or a member's timezone.</p></div><Clock size={22} /></article>
    <article><span class="feature-number">02</span><div><h3>Free time</h3><p>Compare schedules to find times when everyone is available.</p></div><Users size={22} /></article>
-   <article><span class="feature-number">03</span><div><h3>Apple Calendar sync</h3><p>Import events through iOS Shortcuts.</p><a href="/help">Setup guide <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
+   <article><span class="feature-number">03</span><div><h3>Apple & Google Calendar sync</h3><p>Import events with iOS Shortcuts or Google Apps Script.</p><a href="/help">Setup guide <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
   </div>
  </section>
 </main>

@@ -107,6 +107,14 @@ export function getEventsForDayAndMember(dayDate: Date, memberId: string) {
     return calState.events.filter((evt: any) => evt.partnerId === memberId && isSameDayInTz(dayDate, evt.startTime, tz));
 }
 
+export function isLongEvent(evt: any): boolean {
+    return new Date(evt.endTime).getTime() - new Date(evt.startTime).getTime() >= 23 * 60 * 60 * 1000;
+}
+
+export function isVisibleEvent(evt: any): boolean {
+    return calState.showLongEvents || !isLongEvent(evt);
+}
+
 export function getGridRangeForDay(dayDate: Date) {
     const dayEvents = getEventsForDay(dayDate);
     const tz = getActiveTimezone();
@@ -114,6 +122,7 @@ export function getGridRangeForDay(dayDate: Date) {
     let endHour = MIN_END_HOUR;
 
     for (const evt of dayEvents) {
+        if (!isVisibleEvent(evt)) continue;
         const start = getDecimalHourInTimezone(evt.startTime, tz);
         const end = getDecimalHourInTimezone(evt.endTime, tz);
         startHour = Math.min(startHour, Math.max(0, Math.floor(start) - 1));

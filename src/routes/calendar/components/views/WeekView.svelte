@@ -1,6 +1,6 @@
 <script lang="ts">
     import { calState } from "../../state.svelte";
-    import { isSameDay, getEventsForDay } from "../../utils";
+    import { isSameDay, getEventsForDay, isVisibleEvent } from "../../utils";
     import DailyGrid from "./DailyGrid.svelte";
     import {
         Maximize2,
@@ -94,7 +94,7 @@
 
     <div class="space-y-3.5">
         {#each weekDays as day}
-            {@const dayEvents = getEventsForDay(day)}
+            {@const dayEvents = getEventsForDay(day).filter(isVisibleEvent)}
             {@const isCollapsed = isDayCollapsed(day, dayEvents.length)}
             <div
                 class={`rounded-2xl border transition-all ${isSameDay(day, new Date()) ? "border-orange-500/50 bg-slate-900/80 shadow-sm " : "border-slate-800/80 bg-slate-950/40"}`}

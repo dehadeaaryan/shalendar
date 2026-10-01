@@ -24,10 +24,12 @@
 	let copiedKey = $state<string | null>(null);
 	let returnUrl = $state<string>("/");
 	let returnLabel = $state<string>("Back to App");
-	type GuideTab = "ios" | "api" | "schema" | "curl";
+	type GuideTab = "ios" | "google" | "privacy" | "api" | "schema" | "curl";
 	let activeTab = $state<GuideTab>("ios");
 	const guideTabs: { id: GuideTab; label: string; icon: typeof Smartphone }[] = [
 		{ id: "ios", label: "iOS Shortcut Setup", icon: Smartphone },
+		{ id: "google", label: "Google Calendar", icon: CalendarIcon },
+		{ id: "privacy", label: "Privacy & Display", icon: Shield },
 		{ id: "api", label: "API Reference", icon: Globe },
 		{ id: "schema", label: "Payload Schema", icon: BookOpen },
 		{ id: "curl", label: "cURL Test", icon: Terminal },
@@ -69,6 +71,7 @@
   "calendar_name": "shalendar-demo",
   "password": "your-shared-password",
   "partner_name": "demo-name",
+  "source": "apple",
   "timezone": "America/Los_Angeles",
   "sync_start": "2026-09-14T00:00:00-07:00",
   "sync_end": "2026-09-21T23:59:59-07:00",
@@ -94,6 +97,7 @@
     "calendar_name": "shalendar-demo",
     "password": "your-shared-password",
     "partner_name": "BOTH",
+    "source": "apple",
     "timezone": "America/Los_Angeles",
     "events": [
       {
@@ -124,14 +128,14 @@
 			field: "password",
 			type: "string",
 			required: true,
-			description: "The password set when creating the calendar.",
+			description: "The calendar password for standard calendars; the selected member’s access password for privacy-capable calendars.",
 		},
 		{
 			field: "partner_name",
 			type: "string",
 			required: false,
-			description:
-				'Member display name (e.g. "Aaru"). Defaults to "Person 1"; an unknown name creates a member. Use "BOTH" to sync to all existing members.',
+				description:
+				'Member display name (e.g. "Aaru"). Standard calendars can use "BOTH"; privacy-capable calendars require one existing member name.',
 		},
 		{
 			field: "timezone",
@@ -139,6 +143,12 @@
 			required: false,
 			description:
 				"Timezone for a newly created member (e.g. America/Los_Angeles). Defaults to UTC; event timestamps still need an offset or Z.",
+		},
+		{
+			field: "source",
+			type: "string",
+			required: false,
+			description: '"apple" or "google". Defaults to "apple". Sync cleanup only removes missing events from the same source.',
 		},
 		{
 			field: "events",
@@ -185,8 +195,8 @@
 			field: "external_shortcut_id",
 			type: "string",
 			required: false,
-			description:
-				"Stable unique ID for this event. Strongly recommended: without one, repeated syncs can create duplicates.",
+				description:
+				"Stable unique ID for this event within its source. Strongly recommended: without one, repeated syncs can create duplicates.",
 		},
 	];
 
@@ -255,10 +265,10 @@
 </script>
 
 <svelte:head>
-	<title>iOS Shortcut Setup Guide — Shalendar</title>
+	<title>Calendar Sync Setup Guide — Shalendar</title>
 	<meta
 		name="description"
-		content="Step-by-step guide to setting up iOS Shortcuts to automatically sync Apple Calendar events to Shalendar."
+		content="Set up Apple Calendar or Google Calendar sync with Shalendar, including privacy-capable calendars."
 	/>
 </svelte:head>
 
@@ -275,12 +285,12 @@
 				class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-medium text-orange-400 mb-6"
 			>
 				<BookOpen class="w-3.5 h-3.5" />
-				<span>iOS Shortcuts + REST API Guide</span>
+				<span>Apple + Google Calendar Sync Guide</span>
 			</div>
 			<h1
 				class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-5 leading-tight"
 			>
-				Shortcuts Setup &amp; <span
+				Calendar Sync &amp; <span
 					class="bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 bg-clip-text text-transparent"
 					>API Reference</span
 				>
@@ -288,8 +298,7 @@
 			<p
 				class="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed"
 			>
-				Connect your Apple Calendar to Shalendar via iOS Shortcuts to
-				keep shared schedules updated automatically in the background.
+				Connect Apple Calendar with iOS Shortcuts or Google Calendar with Apps Script. Each member can sync their own events into the same Shalendar calendar.
 			</p>
 		</div>
 
@@ -334,8 +343,10 @@
 					<li>
 						Set <code>partner_name</code> to your exact member name,
 						or set it to <code>"BOTH"</code> to sync joint events to
-						all members.
+						all members on standard calendars. Privacy-capable calendars sync one member at a time.
 					</li>
+					<li>Set <code>source</code> to <code>"apple"</code> or <code>"google"</code>. Each source has its own sync window and won’t remove the other source’s events.</li>
+					<li>For privacy-capable calendars, use your own member name and access password. Other members only receive Busy for your event titles.</li>
 					<li>
 						Format dates as ISO 8601 with a timezone offset or <code>Z</code>.
 					</li>
@@ -346,7 +357,7 @@
 						Without <code>sync_start</code> and <code>sync_end</code>, a run with no events will not remove previously synced events.
 					</li>
 					<li>
-						With a sync window, events absent from the payload can be deleted, including events added in Shalendar for that member. Review the window before enabling automatic runs.
+						With a sync window, missing events from the selected source are removed inside that window. Manually created events and events from the other provider are kept.
 					</li>
 				</ul>
 			</div>
@@ -393,6 +404,47 @@
 		</div>
 	</section>
 
+	<!-- Google Calendar Setup -->
+	<section id="google-setup" hidden={activeTab !== "google"} class="guide-panel py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+		<div class="flex items-center space-x-3 mb-6">
+			<div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center"><CalendarIcon class="w-5 h-5 text-blue-400" /></div>
+			<div><h2 class="text-2xl font-bold text-white">Google Calendar Sync</h2><p class="text-xs sm:text-sm text-slate-400">Import one member’s Google Calendar events into Shalendar.</p></div>
+		</div>
+		<div class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 mb-6 text-xs sm:text-sm text-slate-300 leading-relaxed">
+			Google sync runs in your Google account through Apps Script. The script reads a rolling window of 30 days in the past through 180 days ahead, then refreshes every 6 hours. Each Shalendar member should set up a separate script using their own member name and password for privacy-capable calendars.
+		</div>
+		<ol class="space-y-4 text-sm text-slate-300 list-decimal pl-6">
+			<li>Open <a class="text-orange-300 underline" href="https://script.google.com/" target="_blank" rel="noreferrer">Google Apps Script</a> and create a standalone project.</li>
+			<li>Download <a class="text-orange-300 underline" href="/shalendar-google-sync.gs" download>shalendar-google-sync.gs</a>, then paste its contents into the script editor and save.</li>
+			<li>Under <strong>Project Settings → Script properties</strong>, add <code>SHALENDAR_NAME</code>, <code>SHALENDAR_PASSWORD</code>, and <code>SHALENDAR_MEMBER</code>. The password is your member access password on privacy-capable calendars, or the shared password on standard calendars.</li>
+			<li>Optionally add <code>GOOGLE_CALENDAR_ID</code> to sync a specific calendar. Leave it unset to use your default Google Calendar.</li>
+			<li>Run <code>syncGoogleCalendarToShalendar</code> once and approve Google Calendar and external request access.</li>
+			<li>Run <code>installShalendarGoogleSyncTrigger</code> once to install the 6-hour refresh. Shalendar tracks Google and Apple events separately, even when the same member uses both.</li>
+		</ol>
+		<div class="mt-6 p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 leading-relaxed">
+			The sync window replaces only missing <code>google</code> events within its date range. Events outside that window and all Apple-synced events remain unchanged. Review the selected calendar and member properties before enabling the trigger.
+		</div>
+	</section>
+
+	<!-- Privacy and display behavior -->
+	<section id="privacy-display" hidden={activeTab !== "privacy"} class="guide-panel py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+		<div class="flex items-center space-x-3 mb-6">
+			<div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center"><Shield class="w-5 h-5 text-emerald-400" /></div>
+			<div><h2 class="text-2xl font-bold text-white">Privacy & Display</h2><p class="text-xs sm:text-sm text-slate-400">Choose title privacy when you create a calendar.</p></div>
+		</div>
+		<div class="space-y-4 text-sm leading-relaxed text-slate-300">
+			<div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+				<h3 class="font-bold text-white mb-2">Privacy-capable calendars</h3>
+				<p>Turn on <strong>Privacy capable</strong> in the create-calendar form. This choice is saved with the calendar and cannot be changed later. Each member signs in with their own name and access password. Give each person only their password; event titles are replaced with <code>Busy</code> for other members. The signed-in member can add, edit, and delete only their own events. Calendar owners can manage member settings.</p>
+				<p class="mt-3">The first member uses the password entered for Person 1. Enter a different password for every additional member, then share it directly with that person. Privacy calendars sync one member at a time using that member’s password.</p>
+			</div>
+			<div class="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+				<h3 class="font-bold text-white mb-2">Long events</h3>
+				<p>Events lasting 23 hours or more are hidden from Day, Week, Month, and Agenda by default. Use <strong>Show 23+ hr</strong> in the calendar toolbar to display them. Hidden events still count as busy when Shalendar finds mutual free time.</p>
+			</div>
+		</div>
+	</section>
+
 	<!-- API Reference -->
 	<section
 		id="api-reference"
@@ -426,7 +478,7 @@
 				<code class="text-sm font-mono text-white">/api/sync</code>
 			</div>
 			<p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
-				Within each member's sync window, matches events by <code>external_shortcut_id</code> and removes stored events absent from the payload. Supply both <code>sync_start</code> and <code>sync_end</code> to cover a full window, including a run with zero events. The basic Shortcut flow above omits those fields, so an empty run does not clear old events.
+				Within each member and source sync window, matches events by <code>external_shortcut_id</code> and removes stored events absent from that source’s payload. Set <code>source</code> to <code>apple</code> or <code>google</code>. Supply both <code>sync_start</code> and <code>sync_end</code> to cover a full window, including a run with zero events.
 			</p>
 
 			<div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -683,7 +735,7 @@
 		</div>
 
 		<div class="space-y-3">
-			{#each [{ q: "Can both members use the same Shortcut setup?", a: 'Yes. Each member can use their own copy with <code>partner_name</code> set to their exact member name. Use <code>"BOTH"</code> only when the same events should appear under every member.' }, { q: "Why are my event times shifted?", a: "Use ISO 8601 timestamps with an explicit offset, such as <code>2026-09-14T08:00:00-07:00</code>, or UTC with <code>Z</code>. Check the selected calendar timezone view as well." }, { q: "What is external_shortcut_id used for?", a: "It identifies the same event across runs. Use a stable unique value; an event title or Name alone may collide with another event." }, { q: "Why did an empty sync leave old events?", a: "With no events, the API needs both <code>sync_start</code> and <code>sync_end</code> to know which stored events to remove." }] as faq, i}
+				{#each [{ q: "Can one Shalendar member sync Apple and Google calendars?", a: 'Yes. Run separate Apple Shortcuts and Google Apps Script syncs with the same <code>partner_name</code>, using <code>source</code> set to <code>"apple"</code> or <code>"google"</code>. Each source cleans up only its own events.' }, { q: "How does a privacy-capable calendar work?", a: 'Privacy is chosen when the calendar is created and cannot be changed later. Each member signs in with their own name and password. Other members receive only <code>Busy</code> in place of event titles.' }, { q: "Can privacy calendars sync events for BOTH members?", a: 'No. A privacy calendar sync must authenticate one member at a time so event titles stay private.' }, { q: "Why are my event times shifted?", a: "Use ISO 8601 timestamps with an explicit offset, such as <code>2026-09-14T08:00:00-07:00</code>, or UTC with <code>Z</code>. Check the selected calendar timezone view as well." }, { q: "What is external_shortcut_id used for?", a: "It identifies the same event across runs. Use a stable unique value; an event title or Name alone may collide with another event." }, { q: "Why did an empty sync leave old events?", a: "With no events, the API needs both <code>sync_start</code> and <code>sync_end</code> to know which stored events to remove." }] as faq, i}
 				<details class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
 					<summary class="text-xs sm:text-sm font-bold text-white flex items-start gap-2">
 						<span class="text-orange-400 font-mono text-xs">Q{i + 1}.</span>{faq.q}

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { calState } from "../../state.svelte";
-    import { isSameDay, getEventsForDay, getDaysInMonthGrid } from "../../utils";
+    import { isSameDay, getEventsForDay, getDaysInMonthGrid, isVisibleEvent } from "../../utils";
 
     function getMemberColor(partnerId: string) {
         return (
@@ -46,7 +46,7 @@
                     </span>
                 </div>
                 <div class="space-y-1 overflow-y-auto max-h-[85px]">
-                    {#each getEventsForDay(day.date) as evt}
+                    {#each getEventsForDay(day.date).filter(isVisibleEvent) as evt}
                         <button
                             type="button"
                             onclick={() => (calState.selectedEvent = evt)}

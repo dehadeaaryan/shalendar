@@ -113,32 +113,37 @@
                 <div class="flex items-center space-x-1.5">
                     <button
                         type="button"
-                        onclick={() => (isEditing = true)}
-                        class="p-1.5 text-slate-400 hover:text-orange-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                        title="Edit Event"
-                    >
-                        <SquarePen class="w-4 h-4" />
-                    </button>
-                    <button
-                        type="button"
-                        onclick={handleDeleteEvent}
-                        class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                        title="Delete Event"
-                    >
-                        <Trash2 class="w-4 h-4" />
-                    </button>
-                    <button
-                        type="button"
                         onclick={() => (calState.selectedEvent = null)}
                         class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                         title="Close"
                     >
                         <X class="w-5 h-5" />
                     </button>
+                    {#if !calState.privacyEnabled || calState.selectedEvent.partnerId === calState.viewerPartnerId}
+                        <button
+                            type="button"
+                            onclick={() => (isEditing = true)}
+                            class="p-1.5 text-slate-400 hover:text-orange-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                            title="Edit Event"
+                        >
+                            <SquarePen class="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onclick={handleDeleteEvent}
+                            class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                            title="Delete Event"
+                        >
+                            <Trash2 class="w-4 h-4" />
+                        </button>
+                    {/if}
                 </div>
             </div>
 
             <div class="space-y-6 pt-2 pb-2">
+                {#if calState.privacyEnabled}
+                    <p class="text-xs text-slate-400">Your event is only visible to your member account.</p>
+                {/if}
                 <div>
                     <h2
                         class="text-2xl font-extrabold text-white tracking-tight"
@@ -235,7 +240,9 @@
                         class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-orange-500 transition"
                     />
                 </div>
-                <div>
+                {#if calState.privacyEnabled}
+                    <p class="text-xs text-slate-400">This event is only visible to your member account.</p>
+                {:else}<div>
                     <label
                         for="edit-event-partner"
                         class="block text-xs font-semibold text-slate-300 mb-1.5"
@@ -253,7 +260,7 @@
                             <option value={partner.id}>{partner.name}</option>
                         {/each}
                     </select>
-                </div>
+                </div>{/if}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label

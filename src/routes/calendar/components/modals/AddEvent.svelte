@@ -6,7 +6,7 @@
     import { CalendarPlus, X, AlertTriangle } from "lucide-svelte";
 
     let newEventTitle = $state("");
-    let newEventPartnerId = $state(calState.partners[0]?.id || "");
+    let newEventPartnerId = $state(calState.viewerPartnerId || calState.partners[0]?.id || "");
     let newEventStart = $state(formatDateTimeInput(new Date()));
     let newEventEnd = $state(
         formatDateTimeInput(new Date(Date.now() + 3600000)),
@@ -102,7 +102,9 @@
                     class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
                 />
             </div>
-            <div>
+            {#if calState.privacyEnabled}
+                <p class="text-xs text-slate-400">This event will be private to {calState.partners.find((partner) => partner.id === calState.viewerPartnerId)?.name || 'your member account'}.</p>
+            {:else}<div>
                 <label
                     for="event-partner-select"
                     class="block text-xs font-semibold text-slate-300 mb-1.5"
@@ -120,7 +122,7 @@
                         <option value={partner.id}>{partner.name}</option>
                     {/each}
                 </select>
-            </div>
+            </div>{/if}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label

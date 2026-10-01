@@ -19,6 +19,9 @@
 		calState.partners = data.partners;
 		calState.calendarName = data.calendarName;
 		calState.isAuthenticated = data.isAuthenticated;
+		calState.privacyEnabled = data.privacyEnabled;
+		calState.viewerPartnerId = data.viewerPartnerId;
+		calState.viewerIsOwner = data.viewerIsOwner;
 	});
 </script>
 

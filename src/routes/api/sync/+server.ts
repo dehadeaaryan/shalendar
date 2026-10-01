@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db, schema } from '$lib/server/db';
-import { authenticateCalendar } from '$lib/server/auth';
+import { authenticateCalendar, getCalendarByName, verifyPassword } from '$lib/server/auth';
 import { eq, and, gte, lte } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -36,14 +36,34 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (!password || typeof password !== 'string') {
 		return json(
-			{ error: 'Calendar password is required for REST API access. Provide in headers (x-calendar-password) or JSON body (password).' },
+			{ error: 'A calendar or member access password is required. Provide in headers (x-calendar-password) or JSON body (password).' },
 			{ status: 401 }
 		);
 	}
 
-	const calendar = await authenticateCalendar(name.trim(), password);
-	if (!calendar) {
-		return json({ error: 'Authentication failed: Invalid calendar name or password' }, { status: 401 });
+	const foundCalendar = await getCalendarByName(name.trim());
+	if (!foundCalendar) return json({ error: 'Authentication failed: Invalid calendar name or password' }, { status: 401 });
+	let calendar = foundCalendar;
+	let privatePartnerId: string | null = null;
+	const requestedSource = String(body.source || 'apple').toLowerCase();
+	if (requestedSource !== 'apple' && requestedSource !== 'google') {
+		return json({ error: 'source must be "apple" or "google"' }, { status: 400 });
+	}
+	if (calendar.privacyEnabled) {
+		const requestedPartner = body.partner_id || body.partnerId || body.partner_name || body.partnerName || body.partner;
+		if (!requestedPartner || String(requestedPartner).trim().toUpperCase() === 'BOTH') {
+			return json({ error: 'Privacy calendars require one member name or ID for each sync.' }, { status: 400 });
+		}
+		const existing = await db.select().from(schema.partners).where(eq(schema.partners.calendarId, calendar.id));
+		const member = existing.find((p) => p.id === requestedPartner || p.name.toLowerCase() === String(requestedPartner).trim().toLowerCase());
+		if (!member?.accessPasswordHash || !(await verifyPassword(password, member.accessPasswordHash))) {
+			return json({ error: 'Authentication failed: Invalid member name or access password' }, { status: 401 });
+		}
+		privatePartnerId = member.id;
+	} else {
+		const authenticated = await authenticateCalendar(name.trim(), password);
+		if (!authenticated) return json({ error: 'Authentication failed: Invalid calendar name or password' }, { status: 401 });
+		calendar = authenticated;
 	}
 
 	// 2. Extract & Validate Members (Supports Single Partner or BOTH)
@@ -58,6 +78,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		.where(eq(schema.partners.calendarId, calendar.id));
 
 	const isBoth = String(partnerName).trim().toUpperCase() === 'BOTH';
+	if (calendar.privacyEnabled && isBoth) {
+		return json({ error: 'Privacy calendars sync one member at a time.' }, { status: 400 });
+	}
 
 	let targetPartners: typeof existingPartners = [];
 
@@ -70,6 +93,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		let partner = existingPartners.find(
 			(p) => (partnerId && p.id === partnerId) || p.name.toLowerCase() === String(partnerName).toLowerCase()
 		);
+		if (calendar.privacyEnabled && partner?.id !== privatePartnerId) {
+			return json({ error: 'Sync credentials can only update that member’s own events.' }, { status: 403 });
+		}
 
 		if (!partner) {
 			const [newPartner] = await db
@@ -150,6 +176,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					and(
 						eq(schema.events.calendarId, calendar.id),
 						eq(schema.events.partnerId, targetPartner.id),
+						eq(schema.events.source, requestedSource),
 						gte(schema.events.startTime, rangeStart),
 						lte(schema.events.endTime, rangeEnd)
 					)
@@ -166,7 +193,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						.set({
 							title: evt.title,
 							startTime: evt.startTime,
-							endTime: evt.endTime
+						endTime: evt.endTime
 						})
 						.where(eq(schema.events.id, existing.id));
 					updatedCount++;
@@ -178,6 +205,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						startTime: evt.startTime,
 						endTime: evt.endTime,
 						externalShortcutId: evt.externalShortcutId,
+						source: requestedSource,
 						createdAt: nowIso
 					});
 					createdCount++;
@@ -199,6 +227,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					startTime: evt.startTime,
 					endTime: evt.endTime,
 					externalShortcutId: evt.externalShortcutId,
+					source: requestedSource,
 					createdAt: nowIso
 				});
 				createdCount++;

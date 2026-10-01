@@ -5,6 +5,8 @@ export const calendars = sqliteTable('calendars', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
+	privacyEnabled: integer('privacy_enabled', { mode: 'boolean' }).notNull().default(false),
+	ownerPartnerId: text('owner_partner_id'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (table) => [
 	index('calendar_name_idx').on(table.name)
@@ -15,7 +17,8 @@ export const partners = sqliteTable('partners', {
 	calendarId: text('calendar_id').notNull().references(() => calendars.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
 	displayColor: text('display_color').notNull(),
-	timezone: text('timezone').notNull().default('UTC')
+	timezone: text('timezone').notNull().default('UTC'),
+	accessPasswordHash: text('access_password_hash')
 }, (table) => [
 	index('partner_calendar_idx').on(table.calendarId)
 ]);
@@ -28,6 +31,7 @@ export const events = sqliteTable('events', {
 	startTime: text('start_time').notNull(),
 	endTime: text('end_time').notNull(),
 	externalShortcutId: text('external_shortcut_id'),
+	source: text('source').notNull().default('manual'),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 }, (table) => [
 	index('event_calendar_idx').on(table.calendarId),

@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db, schema } from '$lib/server/db';
-import { hashPassword, authenticateCalendar, generateSessionToken, getCalendarByName, verifySessionToken } from '$lib/server/auth';
+import { hashPassword, verifyPassword, authenticateCalendar, generateSessionToken, getCalendarByName, verifySessionToken } from '$lib/server/auth';
 import { eq, and, inArray } from 'drizzle-orm';
 
 const DEFAULT_COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
@@ -11,7 +11,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const action = body.action;
 
 	if (action === 'create_calendar') {
-		const { name, password, members } = body;
+		const { name, password, members, privacyEnabled } = body;
 
 		if (!name || !password) {
 			return json({ error: 'Calendar name and password are required' }, { status: 400 });
@@ -24,29 +24,51 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		const passwordHash = await hashPassword(password);
 
-		const [calendar] = await db
-			.insert(schema.calendars)
-			.values({
-				name: name.trim().toLowerCase(),
-				passwordHash
-			})
-			.returning();
-
+		const privateCalendar = privacyEnabled === true;
 		let memberList = Array.isArray(members) && members.length > 0 ? members : [
 			{ name: 'Person 1', displayColor: '#f97316', timezone: 'UTC' },
 			{ name: 'Person 2', displayColor: '#3b82f6', timezone: 'UTC' }
 		];
+		if (privateCalendar && memberList.some((member: any, idx: number) => {
+			const memberPassword = idx === 0 ? password : member.accessPassword;
+			return typeof memberPassword !== 'string' || memberPassword.length < 8;
+		})) {
+			return json({ error: 'Every privacy calendar member needs an access password of at least 8 characters.' }, { status: 400 });
+		}
+		if (privateCalendar) {
+			const names = memberList.map((member: any) => String(member.name || '').trim().toLowerCase());
+			if (new Set(names).size !== names.length) return json({ error: 'Privacy calendar member names must be unique.' }, { status: 400 });
+			const passwords = memberList.map((member: any, idx: number) => idx === 0 ? password : member.accessPassword);
+			if (new Set(passwords).size !== passwords.length) return json({ error: 'Each privacy calendar member must use a different access password.' }, { status: 400 });
+		}
 
-		const insertMembers = memberList.map((m: any, idx: number) => ({
+		const [calendar] = await db
+			.insert(schema.calendars)
+			.values({
+				name: name.trim().toLowerCase(),
+				passwordHash,
+				privacyEnabled: privateCalendar
+			})
+			.returning();
+
+		const insertMembers = await Promise.all(memberList.map(async (m: any, idx: number) => ({
 			calendarId: calendar.id,
 			name: m.name?.trim() || `Person ${idx + 1}`,
 			displayColor: m.displayColor || DEFAULT_COLORS[idx % DEFAULT_COLORS.length],
-			timezone: m.timezone || 'UTC'
-		}));
+			timezone: m.timezone || 'UTC',
+			accessPasswordHash: privateCalendar
+				? await hashPassword(idx === 0 ? password : m.accessPassword)
+				: null
+		})));
 
-		await db.insert(schema.partners).values(insertMembers);
+		const createdMembers = await db.insert(schema.partners).values(insertMembers).returning();
+		if (privateCalendar && createdMembers[0]) {
+			await db.update(schema.calendars)
+				.set({ ownerPartnerId: createdMembers[0].id })
+				.where(eq(schema.calendars.id, calendar.id));
+		}
 
-		const token = generateSessionToken(calendar.id, calendar.name);
+		const token = generateSessionToken(calendar.id, calendar.name, privateCalendar ? createdMembers[0]?.id : undefined);
 		cookies.set(`session_${calendar.name.toLowerCase()}`, token, {
 			path: '/',
 			httpOnly: true,
@@ -58,17 +80,30 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	if (action === 'login') {
-		const { name, password } = body;
+		const { name, password, partnerName } = body;
 		if (!name || !password) {
 			return json({ error: 'Name and password required' }, { status: 400 });
 		}
 
-		const calendar = await authenticateCalendar(name, password);
-		if (!calendar) {
-			return json({ error: 'Incorrect calendar name or password' }, { status: 401 });
+		const foundCalendar = await getCalendarByName(name);
+		if (!foundCalendar) return json({ error: 'Incorrect calendar name or password' }, { status: 401 });
+		let calendar = foundCalendar;
+		let partnerId: string | undefined;
+		if (calendar.privacyEnabled) {
+			if (!partnerName) return json({ error: 'Enter your member name for this privacy calendar.' }, { status: 400 });
+			const members = await db.select().from(schema.partners).where(eq(schema.partners.calendarId, calendar.id));
+			const member = members.find((item) => item.name.toLowerCase() === String(partnerName).trim().toLowerCase());
+			if (!member?.accessPasswordHash || !(await verifyPassword(password, member.accessPasswordHash))) {
+				return json({ error: 'Incorrect member name or access password' }, { status: 401 });
+			}
+			partnerId = member.id;
+		} else {
+			const authenticated = await authenticateCalendar(name, password);
+			if (!authenticated) return json({ error: 'Incorrect calendar name or password' }, { status: 401 });
+			calendar = authenticated;
 		}
 
-		const token = generateSessionToken(calendar.id, calendar.name);
+		const token = generateSessionToken(calendar.id, calendar.name, partnerId);
 		cookies.set(`session_${calendar.name.toLowerCase()}`, token, {
 			path: '/',
 			httpOnly: true,
@@ -98,6 +133,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		if (!partnerId || !title || !startTime || !endTime) {
 			return json({ error: 'All event fields are required' }, { status: 400 });
+		}
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && (!session.partnerId || partnerId !== session.partnerId || partnerId === 'BOTH')) {
+			return json({ error: 'Privacy calendars only allow you to add events to your own member calendar.' }, { status: 403 });
 		}
 
 		const formattedStart = new Date(startTime).toISOString();
@@ -144,7 +183,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	if (action === 'create_member') {
-		const { calendarName, name, displayColor, timezone } = body;
+		const { calendarName, name, displayColor, timezone, accessPassword } = body;
 		const token = cookies.get(`session_${calendarName?.toLowerCase()}`);
 		const session = verifySessionToken(token || '', calendarName);
 
@@ -155,6 +194,24 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		if (!name) {
 			return json({ error: 'Name is required' }, { status: 400 });
 		}
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && session.partnerId !== calendar.ownerPartnerId) {
+			return json({ error: 'Only the calendar owner can add members.' }, { status: 403 });
+		}
+		if (calendar?.privacyEnabled && (typeof accessPassword !== 'string' || accessPassword.length < 8)) {
+			return json({ error: 'Member access password must be at least 8 characters.' }, { status: 400 });
+		}
+		if (calendar?.privacyEnabled) {
+			const existingMembers = await db.select().from(schema.partners).where(eq(schema.partners.calendarId, session.calendarId));
+			if (existingMembers.some((member) => member.name.toLowerCase() === String(name).trim().toLowerCase())) {
+				return json({ error: 'A member with that name already exists.' }, { status: 400 });
+			}
+			for (const member of existingMembers) {
+				if (member.accessPasswordHash && await verifyPassword(accessPassword, member.accessPasswordHash)) {
+					return json({ error: 'Choose a different access password for each member.' }, { status: 400 });
+				}
+			}
+		}
 
 		const [newMember] = await db
 			.insert(schema.partners)
@@ -162,11 +219,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				calendarId: session.calendarId,
 				name: name.trim(),
 				displayColor: displayColor || '#3b82f6',
-				timezone: timezone || 'UTC'
+				timezone: timezone || 'UTC',
+				accessPasswordHash: calendar?.privacyEnabled ? await hashPassword(accessPassword) : null
 			})
 			.returning();
 
-		return json({ success: true, member: newMember });
+		return json({ success: true, member: { id: newMember.id, name: newMember.name, displayColor: newMember.displayColor, timezone: newMember.timezone } });
 	}
 
 	return json({ error: 'Invalid action' }, { status: 400 });
@@ -190,6 +248,12 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 
 		if (!eventId || !partnerId || !title || !startTime || !endTime) {
 			return json({ error: 'All fields are required' }, { status: 400 });
+		}
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		const [existingEvent] = await db.select().from(schema.events).where(and(eq(schema.events.id, eventId), eq(schema.events.calendarId, session.calendarId))).limit(1);
+		if (!existingEvent) return json({ error: 'Event not found on this calendar' }, { status: 404 });
+		if (calendar?.privacyEnabled && (!session.partnerId || existingEvent.partnerId !== session.partnerId || partnerId !== session.partnerId || partnerId === 'BOTH')) {
+			return json({ error: 'Privacy calendars only allow you to edit your own events.' }, { status: 403 });
 		}
 
 		const formattedStart = new Date(startTime).toISOString();
@@ -258,6 +322,10 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 	if (!partnerId) {
 		return json({ error: 'Member ID is required' }, { status: 400 });
 	}
+	const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+	if (calendar?.privacyEnabled && session.partnerId !== calendar.ownerPartnerId) {
+		return json({ error: 'Only the calendar owner can change member settings.' }, { status: 403 });
+	}
 
 	const updates: any = {};
 	if (name) updates.name = name.trim();
@@ -285,6 +353,10 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	if (action === 'delete_all_events') {
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && session.partnerId !== calendar.ownerPartnerId) {
+			return json({ error: 'Only the calendar owner can delete all events.' }, { status: 403 });
+		}
 		const partners = await db
 			.select({ id: schema.partners.id })
 			.from(schema.partners)
@@ -304,6 +376,13 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 	if (action === 'delete_member') {
 		if (!partnerId) {
 			return json({ error: 'Partner ID is required' }, { status: 400 });
+		}
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && session.partnerId !== calendar.ownerPartnerId) {
+			return json({ error: 'Only the calendar owner can remove members.' }, { status: 403 });
+		}
+		if (calendar?.privacyEnabled && partnerId === calendar.ownerPartnerId) {
+			return json({ error: 'The calendar owner member cannot be removed.' }, { status: 400 });
 		}
 
 		const partner = await db
@@ -325,11 +404,21 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 		if (!eventId) {
 			return json({ error: 'Event ID is required' }, { status: 400 });
 		}
+		const [event] = await db.select().from(schema.events).where(and(eq(schema.events.id, eventId), eq(schema.events.calendarId, session.calendarId))).limit(1);
+		if (!event) return json({ error: 'Event not found on this calendar' }, { status: 404 });
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && event.partnerId !== session.partnerId) {
+			return json({ error: 'Privacy calendars only allow you to delete your own events.' }, { status: 403 });
+		}
 		await db.delete(schema.events).where(eq(schema.events.id, eventId));
 		return json({ success: true });
 	}
 
 	if (action === 'delete_calendar') {
+		const [calendar] = await db.select().from(schema.calendars).where(eq(schema.calendars.id, session.calendarId)).limit(1);
+		if (calendar?.privacyEnabled && session.partnerId !== calendar.ownerPartnerId) {
+			return json({ error: 'Only the calendar owner can delete this calendar.' }, { status: 403 });
+		}
 		await db
 			.delete(schema.calendars)
 			.where(eq(schema.calendars.id, session.calendarId));
