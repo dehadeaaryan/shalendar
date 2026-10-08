@@ -5,7 +5,7 @@
 	let { children } = $props();
 	const title = 'Shalendar — Shared Multi-Person Calendar';
 	const description = 'See everyone’s schedule in one shared calendar. Compare time zones, find free time, and sync with Apple Calendar.';
-	const previewImage = 'https://shalendar.aaryandehade.com/og-preview.png?v=3';
+	const previewImage = 'https://shalendar.aaryandehade.com/og-preview.png?v=5';
 	let pageUrl = $derived(new URL(page.url.pathname, 'https://shalendar.aaryandehade.com').href);
 </script>
 
@@ -21,7 +21,7 @@
 	<meta property="og:image:type" content="image/png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
-	<meta property="og:image:alt" content="Shalendar: One calendar. Every schedule." />
+	<meta property="og:image:alt" content="Shalendar: The Shared Calendar" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:url" content={pageUrl} />
 	<meta name="twitter:title" content={title} />

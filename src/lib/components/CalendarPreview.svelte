@@ -1,20 +1,35 @@
 <script lang="ts">
- const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
- const blocks = [
-  { day: 0, row: 1, title: 'Morning run', time: '08:00', tone: 'peach' },
-  { day: 1, row: 2, title: 'Deep work', time: '10:00', tone: 'lavender' },
-  { day: 2, row: 1, title: 'Coffee together', time: '09:00', tone: 'sage' },
-  { day: 3, row: 3, title: 'Design time', time: '14:00', tone: 'peach' },
-  { day: 4, row: 2, title: 'Weekend plans', time: '12:00', tone: 'lavender' }
- ];
+ import { Columns4, ChevronLeft } from 'lucide-svelte';
+ const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 </script>
-<div class="calendar-preview" aria-label="Example of a shared weekly calendar">
- <div class="preview-heading"><div><span class="eyebrow">Calendar preview</span><h2>Week view</h2></div><span class="preview-badge">Example</span></div>
- <div class="preview-people"><span><i class="peach-dot"></i>Alex</span><span><i class="lavender-dot"></i>Sam</span><span class="preview-zone">One shared view</span></div>
- <div class="preview-grid" aria-hidden="true">
-  {#each days as day, i}<div class:preview-today={i === 2} class="preview-day"><span>{day}</span><strong>{14 + i}</strong></div>{/each}
-  {#each Array.from({ length: 15 }) as _, i}<div class="preview-cell" style="grid-column: {i % 5 + 1}; grid-row: {Math.floor(i / 5) + 2}"></div>{/each}
-  {#each blocks as block}<div class="preview-event {block.tone}" style="grid-column: {block.day + 1}; grid-row: {block.row + 1}"><span>{block.time}</span><strong>{block.title}</strong></div>{/each}
+
+<div class="calendar-preview" aria-label="Example week view with collapsible days and separate member columns">
+ <div class="preview-heading">
+  <div class="preview-title"><Columns4 size={18} /><h2>The week ahead</h2></div>
+  <span class="preview-badge">Example</span>
  </div>
- <div class="preview-note"><span class="status-dot"></span>Events from multiple members in one view</div>
+ <div class="preview-week">
+  {#each days as day, index}
+   <section class:preview-expanded={index === 3} class="preview-day-panel">
+    {#if index === 3}
+     <div class="preview-day-heading"><span class="preview-date active">17</span><strong>Wed, Jun</strong><span class="preview-count">3</span><ChevronLeft size={14} /></div>
+     <div class="preview-member-grid" aria-hidden="true">
+      <div class="preview-member-heading preview-hours-heading">24H</div>
+      <div class="preview-member-heading"><i class="peach-dot"></i>Alex</div>
+      <div class="preview-member-heading"><i class="lavender-dot"></i>Sam</div>
+      <div class="preview-hours">{#each ['09:00', '10:00', '11:00', '12:00'] as hour}<span>{hour}</span>{/each}</div>
+      <div class="preview-member-track">
+       <div class="preview-schedule-event peach" style="top: 12px; height: 48px"><strong>Morning run</strong><span>09:00 – 10:00</span></div>
+       <div class="preview-schedule-event peach" style="top: 114px; height: 48px"><strong>Lunch</strong><span>11:00 – 12:00</span></div>
+      </div>
+      <div class="preview-member-track">
+       <div class="preview-schedule-event lavender" style="top: 63px; height: 74px"><strong>Deep work</strong><span>10:00 – 11:30</span></div>
+      </div>
+     </div>
+    {:else}
+     <div class="preview-collapsed-day"><span>{day}</span><strong class="preview-date">{14 + index}</strong><span>Jun</span></div>
+    {/if}
+   </section>
+  {/each}
+ </div>
 </div>

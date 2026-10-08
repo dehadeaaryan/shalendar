@@ -194,14 +194,12 @@
 <main class="landing-main">
  <section class="landing-hero">
   <div class="hero-story">
-   <span class="eyebrow"><span class="status-dot"></span>Shared calendar</span>
-   <h1>One calendar.<br /><em>Every schedule.</em></h1>
-   <p class="hero-description">See events for everyone in one view. Switch timezones, find free time, and sync Apple or Google Calendar.</p>
-   <div class="hero-details"><span><Users size={15} />Multiple members</span><span><Clock size={15} />Timezone support</span></div>
+   <h1>The Shared<br /><em>Calendar</em></h1>
+   <p class="hero-description">Find time together.</p>
    <CalendarPreview />
   </div>
   <div class="auth-panel" id="auth-form">
-   <div class="auth-heading"><span class="eyebrow">Get started</span><h2>{activeTab === 'create' ? 'Create a calendar' : 'Open a calendar'}</h2><p>{activeTab === 'create' ? 'Name your calendar, add members, and choose how event details are shared.' : 'Enter the password for your member account or standard shared calendar.'}</p></div>
+   <div class="auth-heading"><h2>{activeTab === 'create' ? 'Create a calendar' : 'Open a calendar'}</h2></div>
 			<!-- Form Tabs -->
 			<div class="auth-tabs">
 				<button
@@ -282,7 +280,7 @@
 					<div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
 						<label class="flex items-start gap-3 cursor-pointer">
 							<input type="checkbox" bind:checked={privacyEnabled} class="mt-0.5 accent-orange-500" />
-							<span><strong class="block text-xs text-slate-200">Privacy capable</strong><small class="block text-[11px] leading-relaxed text-slate-400 mt-1">Each person uses a separate password. Other members see your events as Busy. This choice is permanent for this calendar.</small></span>
+							<span><strong class="block text-xs text-slate-200">Private events</strong><small class="block text-[11px] leading-relaxed text-slate-400 mt-1">Separate passwords. Others see only Busy. Permanent once created.</small></span>
 						</label>
 					</div>
 
@@ -372,7 +370,7 @@
 					<div>
 						<label for="open-member-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Your Member Name <span class="normal-case tracking-normal">(privacy calendars)</span></label>
 						<input id="open-member-input" type="text" bind:value={openMemberName} placeholder="Your name in this calendar" class="w-full px-4 py-3 rounded-xl glass-input text-sm" />
-						<p class="text-[11px] text-slate-500 mt-1">Required for privacy calendars. Leave blank for standard calendars.</p>
+						<p class="text-[11px] text-slate-500 mt-1">Only required for private calendars.</p>
 					</div>
 
 					<div>
@@ -421,7 +419,7 @@
 						{#if openLoading}
 							<span>Opening Calendar...</span>
 						{:else}
-							<span>Open Shared Calendar</span>
+							<span>Open calendar</span>
 							<ArrowRight class="w-4 h-4" />
 						{/if}
 					</button>
@@ -433,12 +431,11 @@
  {#if savedCalendars.length > 0}
  <section class="saved-calendars" aria-label="Saved calendars"><span class="eyebrow">Recent calendars</span><div>{#each savedCalendars as name}<a href={`/calendar/${encodeURIComponent(name)}`}><CalendarIcon size={16} /><span>{name}</span><ArrowRight size={14} /></a>{/each}</div></section>
  {/if}
- <section class="features-section">
-  <div class="features-heading"><span class="eyebrow">Features</span><h2>Built for shared schedules.</h2><p>View events across members and timezones.</p></div>
+ <section class="features-section" aria-label="Features">
   <div class="feature-list">
-   <article><span class="feature-number">01</span><div><h3>Timezone views</h3><p>View the calendar in your timezone or a member's timezone.</p></div><Clock size={22} /></article>
-   <article><span class="feature-number">02</span><div><h3>Free time</h3><p>Compare schedules to find times when everyone is available.</p></div><Users size={22} /></article>
-   <article><span class="feature-number">03</span><div><h3>Apple & Google Calendar sync</h3><p>Import events with iOS Shortcuts or Google Apps Script.</p><a href="/help">Setup guide <ArrowRight size={14} /></a></div><Smartphone size={22} /></article>
+   <article><Clock size={20} /><div><h3>Timezones</h3><p>Everyone’s local time.</p></div></article>
+   <article><Users size={20} /><div><h3>Free time</h3><p>See when everyone’s free.</p></div></article>
+   <article><Smartphone size={20} /><div><h3>Calendar sync</h3><p>Apple & Google Calendar.</p><a href="/help">Setup <ArrowRight size={14} /></a></div></article>
   </div>
  </section>
 </main>
